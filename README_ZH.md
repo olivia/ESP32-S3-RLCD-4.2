@@ -16,9 +16,8 @@ ESP32-S3-RLCD-4.2 是一款基于 ESP32-S3-WROOM-1-N16R8（双核 Xtensa LX7 @ 2
 ```
 .
 ├── 01_Arduino_Libraries/   # 第三方库（SensorLib、U8g2、LVGL）
-├── 02_Example/             # Arduino、ESP-IDF 与小智示例程序
+├── 02_Example/             # Arduino、ESP-IDF、ESPHome 与小智示例程序
 ├── 03_Firmware/            # 预编译固件（.bin）
-├── 04_ESPHome/             # ESPHome YAML 示例（Home Assistant）
 └── Tools Configuration.png # Arduino IDE 开发板配置参考
 ```
 
