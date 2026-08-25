@@ -1,0 +1,7 @@
+-mlongcalls
+-fno-builtin-memcpy
+-fno-builtin-memset
+-fno-builtin-bzero
+-mdisable-hardware-atomics
+"-specs=/Users/oliviabriggs/git/ESP32-S3-RLCD-4.2/02_Example/ESP-IDF/09_LVGL_V9_Test/build/specs/picolibc.specs"
+-fno-rtti

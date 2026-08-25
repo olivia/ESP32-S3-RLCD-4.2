@@ -94,6 +94,18 @@ void KEY_LoopTask(void *arg) {
   }
 }
 
+
+//s0-3
+int selectPins[] =
+{
+0,1,2,3
+};
+
+int signalPin = 17;
+
+int n = sizeof(selectPins)/sizeof(selectPins[0]);
+
+
 void setup() {
   audio_ptr = (uint8_t *)heap_caps_malloc(288 * 1000 * sizeof(uint8_t), MALLOC_CAP_SPIRAM);
   assert(audio_ptr);
@@ -114,7 +126,65 @@ void setup() {
   xTaskCreatePinnedToCore(BOOT_LoopTask, "BOOT_LoopTask", 4 * 1024, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(KEY_LoopTask, "KEY_LoopTask", 4 * 1024, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(Codec_LoopTask, "Codec_LoopTask", 4 * 1024, NULL, 4, NULL, 1);
+  Serial.begin(115200);
+  Serial.println("Hello, ESP32-S3!");
+  Serial.println("Wait");
+  Serial.println("Pins set as output: ");
+  pinMode(signalPin, INPUT);
+  for(int i=0; i<n; i++)
+  {
+    pinMode(selectPins[i],OUTPUT);
+  }
+
+}
+
+void loopSwitches() {
+
+  for(int i=12; i<16; i++)
+  {
+  
+    int s0 = (i>>0)&1;
+    int s1 = (i>>1)&1;
+    int s2 = (i>>2)&1;
+    int s3 = (i>>3)&1;
+    digitalWrite(selectPins[0], s0);
+    digitalWrite(selectPins[1], s1);
+    digitalWrite(selectPins[2], s2);
+    digitalWrite(selectPins[3], s3);
+    delay(10);
+    Serial.print(digitalRead(signalPin));
+    Serial.print("\t");
+    delay(10);
+  }
+}
+
+void loopLightsensors() {
+    for(int i=8; i<12; i++)
+  {
+  
+    int s0 = (i>>0)&1;
+    int s1 = (i>>1)&1;
+    int s2 = (i>>2)&1;
+    int s3 = (i>>3)&1;
+    digitalWrite(selectPins[0], s0);
+    digitalWrite(selectPins[1], s1);
+    digitalWrite(selectPins[2], s2);
+    digitalWrite(selectPins[3], s3);
+    delay(50);
+
+    Serial.print(i);
+    Serial.print(":");
+    float ratio = 3.3/1023.0;
+    Serial.print(analogRead(signalPin)*ratio);
+    Serial.print("\t");
+    delay(10);
+  }
 }
 
 void loop() {
+  int hilo[] = {LOW,HIGH};
+  loopSwitches();
+  // loopLightsensors();
+  Serial.println();
+
 }

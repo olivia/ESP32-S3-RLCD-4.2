@@ -1,0 +1,5 @@
+"-specs=/Users/oliviabriggs/git/ESP32-S3-RLCD-4.2/02_Example/ESP-IDF/09_LVGL_V9_Test/build/bootloader/specs/picolibc.specs"
+-mlongcalls
+-fno-builtin-memcpy
+-fno-builtin-memset
+-fno-builtin-bzero
