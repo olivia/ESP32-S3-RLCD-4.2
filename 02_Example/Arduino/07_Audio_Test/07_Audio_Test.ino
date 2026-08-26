@@ -104,6 +104,30 @@ int selectPins[] =
 int signalPin = 17;
 
 int n = sizeof(selectPins)/sizeof(selectPins[0]);
+void switch_read_cb(lv_indev_drv_t * indev_drv, lv_indev_data_t * data) {
+
+  int mapping[] = {LV_KEY_UP, LV_KEY_DOWN, LV_KEY_LEFT, LV_KEY_RIGHT};
+  for(int i=12; i<16; i++)
+  {
+  
+    int s0 = (i>>0)&1;
+    int s1 = (i>>1)&1;
+    int s2 = (i>>2)&1;
+    int s3 = (i>>3)&1;
+    digitalWrite(selectPins[0], s0);
+    digitalWrite(selectPins[1], s1);
+    digitalWrite(selectPins[2], s2);
+    digitalWrite(selectPins[3], s3);
+    delay(1);
+    if (analogRead(signalPin) > 2048) {
+      data->state = LV_INDEV_STATE_PRESSED;
+      data->key = mapping[i - 12];
+    } else {
+      data->state = LV_INDEV_STATE_RELEASED;
+    }
+
+  }
+}
 
 
 void setup() {
@@ -126,6 +150,17 @@ void setup() {
   xTaskCreatePinnedToCore(BOOT_LoopTask, "BOOT_LoopTask", 4 * 1024, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(KEY_LoopTask, "KEY_LoopTask", 4 * 1024, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(Codec_LoopTask, "Codec_LoopTask", 4 * 1024, NULL, 4, NULL, 1);
+
+  static lv_indev_drv_t indev_drv;
+  lv_indev_drv_init(&indev_drv);
+  indev_drv.type = LV_INDEV_TYPE_KEYPAD;
+  indev_drv.read_cb = switch_read_cb;
+
+      g_keypad_indev = lv_indev_drv_register(&indev_drv);
+    
+    // 5. Link the input device to the group containing your button
+    lv_indev_set_group(g_keypad_indev, g_input_group);
+
   Serial.begin(115200);
   Serial.println("Hello, ESP32-S3!");
   Serial.println("Wait");
@@ -184,6 +219,7 @@ void loopLightsensors() {
 void loop() {
   int hilo[] = {LOW,HIGH};
   loopSwitches();
+    lv_timer_handler(); // Let LVGL process the switch state
   // loopLightsensors();
   Serial.println();
 

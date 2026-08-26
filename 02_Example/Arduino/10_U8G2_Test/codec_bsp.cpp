@@ -5,10 +5,51 @@
 #include "codec_bsp.h"
 #include "i2c_bsp.h"
 #include "src/Music/riichi.h"
+#include "src/Music/riichicc.h"
+#include "src/Music/riichifm.h"
+#include "src/Music/riichifuka.h"
 
 
 const uint8_t * music_pcm_start = riichi_audio;
 
+void get_pcm_data(int index) {
+  switch (index) {
+    case 0:
+      music_pcm_start = &riichi_audio[0];
+      break;
+    case 1:
+      music_pcm_start = &riichi_cc[0];
+      break;
+    case 2:
+      music_pcm_start = &riichi_fm[0];
+      break;
+    case 3:
+      music_pcm_start = &riichi_fuka[0];
+      break;
+    default:
+      music_pcm_start = &riichi_audio[0];
+      break;
+  }
+}
+uint32_t get_pcm_data_len(int index) {
+  switch (index) {
+    case 0:
+      return riichi_audio_len;
+      break;
+    case 1:
+      return  riichi_cc_len;
+      break;
+    case 2:
+      return riichi_fm_len;
+      break;
+    case 3:
+      return riichi_fuka_len;
+      break;
+    default:
+      return riichi_audio_len;
+      break;
+  }
+}
 
 void CodecPort::CodecPort_MusicTask(void *arg) {
   CodecPort *codec = (CodecPort *)arg;
@@ -131,7 +172,8 @@ void CodecPort::CodecPort_CreateEchoTask(void) {
   xTaskCreate(CodecPort_EchoTask, "CodecPort_EchoTask", 4 * 1024, (void *)this, 2, NULL);
 }
 
-uint8_t *CodecPort::CodecPort_GetPcmData(uint32_t *len) {
-  *len = riichi_audio_len;
+uint8_t *CodecPort::CodecPort_GetPcmData(uint32_t *len, int index) {
+  *len = get_pcm_data_len(index);
+  get_pcm_data(index);
   return (uint8_t *)music_pcm_start;
 }

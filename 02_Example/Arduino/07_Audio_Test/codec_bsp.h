@@ -37,5 +37,5 @@ public:
 
   void CodecPort_SetInfo(const char *strName, int open_en, int sample_rate, int channel, int bits_per_sample);
 
-  uint8_t *CodecPort_GetPcmData(uint32_t *len);
+  uint8_t *CodecPort_GetPcmData(uint32_t *len, int index);
 };

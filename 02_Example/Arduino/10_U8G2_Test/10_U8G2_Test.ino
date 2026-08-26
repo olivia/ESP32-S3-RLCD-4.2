@@ -1,10 +1,12 @@
+#include "display_bsp.h"
+#include "src/app_bsp/lvgl_bsp.h"
 #include "src/ExternLib/button/button_bsp.h"
+#include "src/ui/ui.h"
 #include "i2c_bsp.h"
 #include "codec_bsp.h"
 #include "ST7305_U8g2.h"
 #include "maru.c"
 #define U8G2_USE_LARGE_FONTS
-
 #define LCD_WIDTH 400
 #define LCD_HEIGHT 300
 
@@ -13,6 +15,9 @@
 #define RLCD_DC_PIN 5
 #define RLCD_CS_PIN 40
 #define RLCD_RST_PIN 41
+// static lv_ui init_ui;
+
+DisplayPort RlcdPort(12, 11, 5, 40, 41, 400, 300);
 
 static ST7305_U8g2 lcd(RLCD_SCK_PIN, RLCD_MOSI_PIN, RLCD_DC_PIN, RLCD_CS_PIN, RLCD_RST_PIN);
 static U8G2 *u8g2 = nullptr;
@@ -36,6 +41,20 @@ CodecPort *codecport = NULL;
 static uint8_t *audio_ptr = NULL;
 static bool is_Music = true;
 EventGroupHandle_t CodecGroups;
+
+static void Lvgl_FlushCallback(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map) {
+  uint16_t *buffer = (uint16_t *)color_map;
+  for (int y = area->y1; y <= area->y2; y++) {
+    for (int x = area->x1; x <= area->x2; x++) {
+      uint8_t color = (*buffer < 0x7fff) ? ColorBlack : ColorWhite;
+      RlcdPort.RLCD_SetPixel(x, y, color);
+      buffer++;
+    }
+  }
+  RlcdPort.RLCD_Display();
+  lv_disp_flush_ready(drv);
+}
+
 
 static void drawCenteredUTF8X2(int y, const char *text)
 {
@@ -81,22 +100,21 @@ void BOOT_LoopTask(void *arg) {
 void Codec_LoopTask(void *arg) {
   bool is_eco = 0;
   for (;;) {
-    EventBits_t even = xEventGroupWaitBits(CodecGroups, (0x01 | 0x02 | 0x04), pdTRUE, pdFALSE, pdMS_TO_TICKS(8 * 1000));
-    if (even & 0x01) {
-      //codecport->CodecPort_EchoRead(audio_ptr, 192 * 1000);
-      is_eco = 1;
-    } else if (even & 0x02) {
-      if (1 == is_eco) {
-        is_eco = 0;
-        codecport->CodecPort_PlayWrite(audio_ptr, 192 * 1000);
-          Serial.println("Play music");
-
+    EventBits_t even = xEventGroupWaitBits(CodecGroups, (0x01 | 0x02 | 0x04| 0x08), pdTRUE, pdFALSE, pdMS_TO_TICKS(8 * 1000));
+    if (even) 
+      {
+      int indexArgs = even;
+      int index = 0;
+      while (indexArgs > 0 && (indexArgs & 0x01) != 1) {
+        index++;
+        indexArgs >>= 1;
       }
-    } else if (even & 0x04) {
+      
       codecport->CodecPort_SetSpeakerVol(90);
       uint32_t bytes_sizt;
       size_t bytes_write = 0;
-      uint8_t *data_ptr = codecport->CodecPort_GetPcmData(&bytes_sizt);
+      Serial.printf("attempting to get %d", index);
+      uint8_t *data_ptr = codecport->CodecPort_GetPcmData(&bytes_sizt, index);
       while (bytes_write < bytes_sizt) {
         codecport->CodecPort_PlayWrite(data_ptr, 256);
         data_ptr += 256;
@@ -127,6 +145,8 @@ void KEY_LoopTask(void *arg) {
 }
 #define LIGHT_SENSORS_COUNT 4
 typedef enum {
+    STATE_STABLE_COVERED       = 5, // Light is low and steady (covered)
+
     STATE_STABLE_DARK       = 0, // Light is low and steady (covered)
     STATE_STABLE_BRIGHT     = 1, // Light is high and steady (uncovered)
     STATE_RAPID_COVERING    = 2, // Signal is plunging sharply (hand dropping over it)
@@ -145,74 +165,25 @@ static SensorState_t previousStateArr[LIGHT_SENSORS_COUNT] = { STATE_STABLE_DARK
 
 
 uint16_t stableSettleCounterArr[LIGHT_SENSORS_COUNT] = {0,0,0,0};
+unsigned long lastTriggered[LIGHT_SENSORS_COUNT] = {0,0,0,0};
+
 bool isArmedArr[LIGHT_SENSORS_COUNT] = {false,false,false,false}; // Tracks if a sensor is primed to fire
 void processLightSensor(int rawValue, int sensor_id) {
-    int32_t emaFastScaled = emaFastScaledArr[sensor_id]; 
-    int32_t emaSlowScaled = emaSlowScaledArr[sensor_id];
-    
-    // 1. Grab the last known settled state
-    SensorState_t previousState = currentStateArr[sensor_id];
-    SensorState_t currentState = previousState;
-
-    // 2. Filter Initializer
-    int32_t rawScaled = (int32_t)rawValue << 8; 
-    if (emaFastScaled < 0) {
-        emaFastScaledArr[sensor_id] = rawScaled;
-        emaSlowScaledArr[sensor_id] = rawScaled;
-        currentStateArr[sensor_id] = STATE_STABLE_BRIGHT;
-        return;
+    long currTime = millis();
+    SensorState_t prevState = currentStateArr[sensor_id];
+    SensorState_t currState = (rawValue > 400) ? STATE_STABLE_DARK : currentStateArr[sensor_id];
+    if (prevState == STATE_STABLE_COVERED && currState == STATE_STABLE_DARK) {
+      currentStateArr[sensor_id] = currState;
     }
-
-    // 3. Math Calculations
-    emaFastScaled = emaFastScaled + ((rawScaled - emaFastScaled) >> 2); 
-    emaSlowScaled = emaSlowScaled + ((rawScaled - emaSlowScaled) >> 6); 
-
-    int emaFast = emaFastScaled >> 8;
-    int emaSlow = emaSlowScaled >> 8;
-    int delta = emaFast - emaSlow;
-
-    // 4. --- STATE EVALUATION WITH INTEGRATED DEBOUNCE ---
-    if (delta < -150) { 
-        currentState = STATE_RAPID_COVERING;
-        stableSettleCounterArr[sensor_id] = 0; // Reset counter: value is still actively falling
-    } 
-    else if (delta > 150) {
-        currentState = STATE_RAPID_UNCOVERING;
-        stableSettleCounterArr[sensor_id] = 0; // Reset counter: value is still actively spiking
-    } 
-    else if (abs(delta) < 50) { 
-        // Delta is small, increment the confirmation check timer
-        stableSettleCounterArr[sensor_id]++;
-
-        // 🌟 DEBOUNCE REQUIREMENT: Must stay flat for 15 execution loops to count as stable
-        if (stableSettleCounterArr[sensor_id] >= 15) {
-            if (emaSlow > 2500) { 
-                currentState = STATE_STABLE_BRIGHT;
-            } else {
-                currentState = STATE_STABLE_DARK;
-            }
-        } else {
-            // Keep the previous state (e.g. RAPID_COVERING) while we wait for verification
-            currentState = previousState; 
-        }
-    } 
-    else {
-        // If it lands in the middle zone (50-150), let it linger without triggering anything
-        stableSettleCounterArr[sensor_id] = 0; 
-    }
-
-    // 5. --- THE FIXED EDGE DETECTOR ---
-    // Will now only trigger when transitioning out of a fully debounced state change
-    if (previousState == STATE_RAPID_COVERING && currentState == STATE_STABLE_DARK) {
+    else if (prevState != STATE_STABLE_COVERED && rawValue < 175 && (lastTriggered[sensor_id] + 1000 * 1) < currTime) {
         is_Music = true;
-        xEventGroupSetBits(CodecGroups, 0x04);
+        currState = STATE_STABLE_COVERED;
+        currentStateArr[sensor_id] = currState;
+        lastTriggered[sensor_id] = currTime;
+        xEventGroupSetBits(CodecGroups, 1 << sensor_id);
     }
+    previousStateArr[sensor_id] = currState;
     
-    // 6. Global Save Updates
-    emaFastScaledArr[sensor_id] = emaFastScaled;
-    emaSlowScaledArr[sensor_id] = emaSlowScaled;
-    currentStateArr[sensor_id] = currentState;
-    previousStateArr[sensor_id] = previousState;
 }
 
 
@@ -426,8 +397,20 @@ void setup()
   Serial.begin(115200);
   delay(300);
 
+
+//   RlcdPort.RLCD_Init();
+//   Lvgl_PortInit(400, 300, Lvgl_FlushCallback);
+//   if (Lvgl_lock(-1)) {
+// //    setup_ui(&init_ui);
+//     // lv_label_set_text(init_ui.screen_label_1, "等待操作");
+//     // lv_label_set_text(init_ui.screen_label_2, "IDLE");
+//     ui_init();
+//     Lvgl_unlock();
+//   }
+
+  
   lcd.begin(0, U8G2_R1);
-  u8g2 = lcd.getU8g2();
+   u8g2 = lcd.getU8g2();
 
   last_report_ms = millis();
   CodecGroups = xEventGroupCreate();
