@@ -227,11 +227,13 @@ bool isArmedArr[LIGHT_SENSORS_COUNT] = {false,false,false,false}; // Tracks if a
 void processLightSensor(int rawValue, int sensor_id) {
     long currTime = millis();
     SensorState_t prevState = currentStateArr[sensor_id];
-    SensorState_t currState = (rawValue > 400) ? STATE_STABLE_DARK : currentStateArr[sensor_id];
+    SensorState_t currState = (rawValue > 1000) ? STATE_STABLE_DARK : currentStateArr[sensor_id];
+    bool stateChange = false;
     if (prevState == STATE_STABLE_COVERED && currState == STATE_STABLE_DARK) {
       currentStateArr[sensor_id] = currState;
+      stateChange = true;
     }
-    else if (prevState != STATE_STABLE_COVERED && rawValue < 175 && (lastTriggered[sensor_id] + 1000 * 1) < currTime) {
+    else if (prevState != STATE_STABLE_COVERED && rawValue < 250 && (lastTriggered[sensor_id] + 1000 * 1) < currTime) {
         is_Music = true;
             Serial.println("playing the muse");
 
@@ -239,6 +241,9 @@ void processLightSensor(int rawValue, int sensor_id) {
         currentStateArr[sensor_id] = currState;
         lastTriggered[sensor_id] = currTime;
         xEventGroupSetBits(CodecGroups, 1 << sensor_id);
+        stateChange = true;
+
+
     }
     previousStateArr[sensor_id] = currState;
     
@@ -286,7 +291,44 @@ static void bar1_update_cb(lv_timer_t * timer) {
     lv_bar_set_value(ui_Bar1, lightState[0], LV_ANIM_ON); 
     lv_bar_set_value(ui_Bar2, lightState[1], LV_ANIM_ON); 
     lv_bar_set_value(ui_Bar3, lightState[2], LV_ANIM_ON); 
-    lv_bar_set_value(ui_Bar4, lightState[3], LV_ANIM_ON); 
+    lv_bar_set_value(ui_Bar4, lightState[3], LV_ANIM_ON);
+    int riichi_count = 0; 
+    for (int i=0; i<4;i++) {
+        lv_obj_t * cui_player;
+        lv_obj_t * riichi_icon;
+        switch(i) {
+            case 0:
+                cui_player = ui_player4;
+                break;
+            case 1:
+                cui_player = ui_player3;
+                break;
+            case 2:
+                cui_player = ui_player1;
+                break;
+            case 3:
+                cui_player = ui_player2;
+                break;
+            default:
+                cui_player = ui_player1;
+        }
+        riichi_icon = ui_comp_get_child(cui_player, UI_COMP_PLAYER_PANEL9_RIICHI);
+        if (!lv_obj_has_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN) && currentStateArr[i] != STATE_STABLE_COVERED ) {
+          lv_obj_add_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN);
+
+        } else if (lv_obj_has_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN)&& currentStateArr[i] == STATE_STABLE_COVERED ) {
+          lv_obj_remove_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN);
+        }
+        riichi_count += (currentStateArr[i] == STATE_STABLE_COVERED) ? 1 : 0;
+    }
+        // "Player" (6) + Number (1) + Null terminator (1) = 8 bytes needed
+    char result[3]; 
+
+    // Concatenate safely
+    snprintf(result, sizeof(result), "%s%d", "x", riichi_count);
+    lv_label_set_text(ui_Label5,result);
+
+
 
 }
 
@@ -476,6 +518,17 @@ void setupBarTimers() {
   lv_timer_create(bar1_update_cb, 80, ui_Bar1);
 }
 
+void setupPlayers() {
+  lv_label_set_text(ui_comp_get_child(ui_player1, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), "olivia");
+  lv_label_set_text(ui_comp_get_child(ui_player1, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), "東");
+  lv_label_set_text(ui_comp_get_child(ui_player4, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), "stephen");
+  lv_label_set_text(ui_comp_get_child(ui_player4, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), "南");
+  lv_label_set_text(ui_comp_get_child(ui_player3, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), "jay");
+  lv_label_set_text(ui_comp_get_child(ui_player3, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), "西");
+  lv_label_set_text(ui_comp_get_child(ui_player2, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), "porrith");
+  lv_label_set_text(ui_comp_get_child(ui_player2, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), "北");
+}
+
 void setup()
 {
   audio_ptr = (uint8_t *)heap_caps_malloc(288 * 1000 * sizeof(uint8_t), MALLOC_CAP_SPIRAM);
@@ -493,8 +546,9 @@ void setup()
 
    if (Lvgl_lock(-1)) {
     ui_init();
-    //init_gpio_input();  
-    //setupBarTimers();
+    setupPlayers();
+    init_gpio_input();  
+    setupBarTimers();
     Lvgl_unlock();
 
    }

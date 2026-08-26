@@ -45,24 +45,24 @@ lv_obj_set_style_pad_top(ui_Panel1, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_pad_bottom(ui_Panel1, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_player1 = ui_player_create(ui_Panel1);
-lv_obj_set_x( ui_player1, 0 );
-lv_obj_set_y( ui_player1, 0 );
+lv_obj_set_x( ui_player1, 17 );
+lv_obj_set_y( ui_player1, 133 );
 lv_obj_remove_flag( ui_player1, LV_OBJ_FLAG_HIDDEN );    /// Flags
 lv_obj_set_style_transform_rotation(ui_player1, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_player3 = ui_player_create(ui_Panel1);
-lv_obj_set_x( ui_player3, 0 );
-lv_obj_set_y( ui_player3, 0 );
+lv_obj_set_x( ui_player3, 243 );
+lv_obj_set_y( ui_player3, -107 );
 lv_obj_set_style_transform_rotation(ui_player3, 1800, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_player2 = ui_player_create(ui_Panel1);
-lv_obj_set_x( ui_player2, 0 );
-lv_obj_set_y( ui_player2, 0 );
+lv_obj_set_x( ui_player2, 10 );
+lv_obj_set_y( ui_player2, -101 );
 lv_obj_set_style_transform_rotation(ui_player2, 900, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_player4 = ui_player_create(ui_Panel1);
-lv_obj_set_x( ui_player4, 0 );
-lv_obj_set_y( ui_player4, 0 );
+lv_obj_set_x( ui_player4, 252 );
+lv_obj_set_y( ui_player4, 126 );
 lv_obj_set_style_transform_rotation(ui_player4, 2700, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_roundpane = lv_obj_create(ui_Screen1);
