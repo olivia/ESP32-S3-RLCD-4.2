@@ -5,4 +5,3 @@ ui_themes.c
 ui.c
 ui_comp_hook.c
 ui_helpers.c
-fonts/ui_font_Font1.c

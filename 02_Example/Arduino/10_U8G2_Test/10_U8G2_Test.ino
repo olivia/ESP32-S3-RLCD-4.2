@@ -1,6 +1,7 @@
 #include "display_bsp.h"
 #include "src/app_bsp/lvgl_bsp.h"
 #include "src/ExternLib/button/button_bsp.h"
+#include "lvgl.h" 
 #include "src/ui/ui.h"
 #include "i2c_bsp.h"
 #include "codec_bsp.h"
@@ -17,7 +18,6 @@
 #define RLCD_RST_PIN 41
 // static lv_ui init_ui;
 
-DisplayPort RlcdPort(12, 11, 5, 40, 41, 400, 300);
 
 static ST7305_U8g2 lcd(RLCD_SCK_PIN, RLCD_MOSI_PIN, RLCD_DC_PIN, RLCD_CS_PIN, RLCD_RST_PIN);
 static U8G2 *u8g2 = nullptr;
@@ -42,7 +42,9 @@ static uint8_t *audio_ptr = NULL;
 static bool is_Music = true;
 EventGroupHandle_t CodecGroups;
 
-static void Lvgl_FlushCallback(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map) {
+DisplayPort RlcdPort(12, 11, 5, 40, 41, 400, 300);
+
+static void Lvgl_FlushCallback(lv_display_t *drv, const lv_area_t *area, uint8_t *color_map) {
   uint16_t *buffer = (uint16_t *)color_map;
   for (int y = area->y1; y <= area->y2; y++) {
     for (int x = area->x1; x <= area->x2; x++) {
@@ -54,6 +56,7 @@ static void Lvgl_FlushCallback(lv_disp_drv_t *drv, const lv_area_t *area, lv_col
   RlcdPort.RLCD_Display();
   lv_disp_flush_ready(drv);
 }
+
 
 
 static void drawCenteredUTF8X2(int y, const char *text)
@@ -85,6 +88,64 @@ int selectPins[] =
 int signalPin = 17;
 
 int n = sizeof(selectPins)/sizeof(selectPins[0]);
+
+// Global variable for your input device
+lv_indev_t * indev_keypad;
+
+void gpio_keypad_read_cb(lv_indev_drv_t * indev_drv, lv_indev_data_t * data) {
+  data->state = LV_INDEV_STATE_RELEASED; // Default state
+
+  const uint32_t target_keys[] = {
+    LV_KEY_NEXT,
+    LV_KEY_PREV,
+    LV_KEY_UP,
+    LV_KEY_DOWN
+};
+
+  Serial.println("trying to read");
+  for(int i=0; i<4; i++)
+  {
+    if (switchState[i]) {
+        data->state = LV_INDEV_STATE_PRESSED;
+        // Map your switch to an LVGL navigation key (e.g., ENTER, NEXT, PREV)
+        data->key = target_keys[i];
+        uint32_t pressed_key = LV_KEY_NEXT;
+        lv_obj_t * current_screen = lv_scr_act();
+        lv_event_send(current_screen, LV_EVENT_KEY, &pressed_key);
+
+    } else {
+      data->state = LV_INDEV_STATE_RELEASED;
+    }
+
+  }
+
+}
+
+
+void init_gpio_input(void) {
+    // 1. Declare and initialize the LVGL v8 driver structure
+    static lv_indev_drv_t indev_drv;
+    lv_indev_drv_init(&indev_drv);
+    
+    // 2. Configure the driver structure parameters
+    indev_drv.type = LV_INDEV_TYPE_KEYPAD;
+    indev_drv.read_cb = gpio_keypad_read_cb; // Your callback function stays exactly the same
+
+    // 3. Register the driver to create the input device
+    indev_keypad = lv_indev_drv_register(&indev_drv);
+
+    // 4. Create an object group and assign it to the input device
+    lv_group_t * g = lv_group_create();
+    lv_indev_set_group(indev_keypad, g);
+
+    // FIX: Add the PANEL widget inside the screen, NOT the root screen itself
+    lv_group_add_obj(g, ui_Panel1); 
+    lv_group_focus_obj(ui_Panel1);
+    lv_group_focus_freeze(g, true); 
+
+}
+
+
 
 void BOOT_LoopTask(void *arg) {
   for (;;) {
@@ -155,6 +216,8 @@ typedef enum {
 } SensorState_t;
 
 
+
+
 // Filter histories (shifted left by 8 bits for fixed-point math)
 static int32_t emaFastScaledArr[LIGHT_SENSORS_COUNT] = { -1, -1, -1, -1 }; 
 static int32_t emaSlowScaledArr[LIGHT_SENSORS_COUNT] = { -1, -1, -1, -1 };
@@ -185,7 +248,6 @@ void processLightSensor(int rawValue, int sensor_id) {
     previousStateArr[sensor_id] = currState;
     
 }
-
 
 void SENSOR_LoopTask(void *arg) {
   const TickType_t xSettleDelay = pdMS_TO_TICKS(1); // 1ms for hardware stabilization
@@ -219,11 +281,35 @@ void SENSOR_LoopTask(void *arg) {
       vTaskDelay(xSettleDelay);
       int rawVal = analogRead(signalPin);
       lightState[i-8] = floor(180.0*rawVal/4095.0);
+      
       processLightSensor(rawVal, i-8);
     }
   }
 }
 
+static void bar1_update_cb(lv_timer_t * timer) {
+    lv_obj_t * bar = (lv_obj_t *)(timer->user_data);
+    // Replace 'new_value' with your actual data source (e.g., sensor reading)
+    lv_bar_set_value(ui_Bar1, lightState[0], LV_ANIM_OFF); 
+}
+
+static void bar2_update_cb(lv_timer_t * timer) {
+    lv_obj_t * bar = (lv_obj_t *)(timer->user_data);
+    // Replace 'new_value' with your actual data source (e.g., sensor reading)
+    lv_bar_set_value(ui_Bar2, lightState[1], LV_ANIM_OFF); 
+}
+
+static void bar3_update_cb(lv_timer_t * timer) {
+    lv_obj_t * bar = (lv_obj_t *)(timer->user_data);
+    // Replace 'new_value' with your actual data source (e.g., sensor reading)
+    lv_bar_set_value(ui_Bar3, lightState[2], LV_ANIM_OFF); 
+}
+
+static void bar4_update_cb(lv_timer_t * timer) {
+    lv_obj_t * bar = (lv_obj_t *)(timer->user_data);
+    // Replace 'new_value' with your actual data source (e.g., sensor reading)
+    lv_bar_set_value(ui_Bar4, lightState[3], LV_ANIM_OFF); 
+}
 
 
 const char* const utf8Labels[] = {
@@ -389,6 +475,12 @@ void DISPLAY_LoopTask(void *arg) {
     }
   }
 }
+void setupBarTimers() {
+  lv_timer_create(bar1_update_cb, 80, ui_Bar1);
+  lv_timer_create(bar2_update_cb, 80, ui_Bar2);
+  lv_timer_create(bar3_update_cb, 80, ui_Bar3);
+  lv_timer_create(bar4_update_cb, 80, ui_Bar4);
+}
 
 void setup()
 {
@@ -398,19 +490,24 @@ void setup()
   delay(300);
 
 
-//   RlcdPort.RLCD_Init();
-//   Lvgl_PortInit(400, 300, Lvgl_FlushCallback);
-//   if (Lvgl_lock(-1)) {
+   RlcdPort.RLCD_Init();
+   Lvgl_PortInit(400, 300, Lvgl_FlushCallback);
+   if (Lvgl_lock(-1)) {
 // //    setup_ui(&init_ui);
 //     // lv_label_set_text(init_ui.screen_label_1, "等待操作");
 //     // lv_label_set_text(init_ui.screen_label_2, "IDLE");
-//     ui_init();
-//     Lvgl_unlock();
-//   }
+     ui_init();
+     init_gpio_input();  
+    setupBarTimers();
+
+     Lvgl_unlock();
+
+   }
 
   
-  lcd.begin(0, U8G2_R1);
-   u8g2 = lcd.getU8g2();
+  // lcd.begin(0, U8G2_R1);
+  //  u8g2 = lcd.getU8g2();
+  // u8g2->enableUTF8Print(); 
 
   last_report_ms = millis();
   CodecGroups = xEventGroupCreate();
@@ -423,13 +520,12 @@ void setup()
   xTaskCreatePinnedToCore(KEY_LoopTask, "KEY_LoopTask", 4 * 1024, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(Codec_LoopTask, "Codec_LoopTask", 4 * 1024, NULL, 4, NULL, 1);
   xTaskCreatePinnedToCore(SENSOR_LoopTask, "SENSOR_LoopTask", 4 * 1024, NULL, 4, NULL, 1);
-  xTaskCreatePinnedToCore(DISPLAY_LoopTask, "SENSOR_LoopTask", 5 * 1024, NULL, 4, NULL,1);
+  //xTaskCreatePinnedToCore(DISPLAY_LoopTask, "DISPLAY_LoopTask", 5 * 1024, NULL, 4, NULL,1);
 
   for(int i=0; i<n; i++)
   {
     pinMode(selectPins[i],OUTPUT);
   }
-  u8g2->enableUTF8Print(); 
 
   Serial.println("ST7305 U8g2 counter demo started");
 }
@@ -471,6 +567,7 @@ void loopLightsensors() {
 
 void loop()
 {
+  lv_timer_handler();
   //loopSwitches();
   //loopLightsensors();
 
