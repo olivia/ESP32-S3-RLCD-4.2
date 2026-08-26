@@ -3,12 +3,19 @@
 // LVGL version: 9.3
 // Project name: SquareLine_Projecttest
 
-#ifndef _UI_EVENTS_H
-#define _UI_EVENTS_H
+#ifndef _UI_COMP_BAR_H
+#define _UI_COMP_BAR_H
+
+#include "ui.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+// COMPONENT Bar
+#define UI_COMP_BAR_BAR 0
+#define _UI_COMP_BAR_NUM 1
+lv_obj_t *ui_Bar_create(lv_obj_t *comp_parent);
 
 #ifdef __cplusplus
 } /*extern "C"*/

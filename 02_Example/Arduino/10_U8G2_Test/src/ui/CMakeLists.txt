@@ -1,9 +1,14 @@
-SET(SOURCES ui_Screen1.c
+SET(SOURCES ui_comp_bar.c
+    ui_comp_player.c
+    ui_comp.c
+    ui_Screen1.c
     ui_Screen2.c
     ui_theme_manager.c
     ui_themes.c
     ui.c
     ui_comp_hook.c
-    ui_helpers.c)
+    ui_helpers.c
+    fonts/ui_font_windylg.c
+    fonts/ui_font_windymed.c)
 
 add_library(ui ${SOURCES})

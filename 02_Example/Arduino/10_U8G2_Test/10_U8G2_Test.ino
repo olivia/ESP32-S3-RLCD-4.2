@@ -92,7 +92,7 @@ int n = sizeof(selectPins)/sizeof(selectPins[0]);
 // Global variable for your input device
 lv_indev_t * indev_keypad;
 
-void gpio_keypad_read_cb(lv_indev_drv_t * indev_drv, lv_indev_data_t * data) {
+void gpio_keypad_read_cb(lv_indev_t * indev, lv_indev_data_t * data) {
   data->state = LV_INDEV_STATE_RELEASED; // Default state
 
   const uint32_t target_keys[] = {
@@ -100,50 +100,43 @@ void gpio_keypad_read_cb(lv_indev_drv_t * indev_drv, lv_indev_data_t * data) {
     LV_KEY_PREV,
     LV_KEY_UP,
     LV_KEY_DOWN
-};
+  };
 
-  Serial.println("trying to read");
   for(int i=0; i<4; i++)
   {
     if (switchState[i]) {
         data->state = LV_INDEV_STATE_PRESSED;
-        // Map your switch to an LVGL navigation key (e.g., ENTER, NEXT, PREV)
         data->key = target_keys[i];
         uint32_t pressed_key = LV_KEY_NEXT;
-        lv_obj_t * current_screen = lv_scr_act();
-        lv_event_send(current_screen, LV_EVENT_KEY, &pressed_key);
-
+        
+        // CHANGED: lv_scr_act() is replaced by lv_screen_active() in v9
+lv_obj_t * current_screen = lv_screen_active();
+lv_obj_send_event(current_screen, LV_EVENT_KEY, &pressed_key);
+        break; // Added break to stop checking once a pressed key is handled
     } else {
       data->state = LV_INDEV_STATE_RELEASED;
     }
-
   }
-
 }
 
-
 void init_gpio_input(void) {
-    // 1. Declare and initialize the LVGL v8 driver structure
-    static lv_indev_drv_t indev_drv;
-    lv_indev_drv_init(&indev_drv);
+    // 1. CHANGED: Directly create the input device object
+    indev_keypad = lv_indev_create();
     
-    // 2. Configure the driver structure parameters
-    indev_drv.type = LV_INDEV_TYPE_KEYPAD;
-    indev_drv.read_cb = gpio_keypad_read_cb; // Your callback function stays exactly the same
+    // 2. CHANGED: Configure the input device using specific setter functions
+    lv_indev_set_type(indev_keypad, LV_INDEV_TYPE_KEYPAD);
+    lv_indev_set_read_cb(indev_keypad, gpio_keypad_read_cb);
 
-    // 3. Register the driver to create the input device
-    indev_keypad = lv_indev_drv_register(&indev_drv);
-
-    // 4. Create an object group and assign it to the input device
+    // 3. Create an object group and assign it to the input device
     lv_group_t * g = lv_group_create();
     lv_indev_set_group(indev_keypad, g);
 
-    // FIX: Add the PANEL widget inside the screen, NOT the root screen itself
+    // Add the PANEL widget inside the screen
     lv_group_add_obj(g, ui_Panel1); 
     lv_group_focus_obj(ui_Panel1);
     lv_group_focus_freeze(g, true); 
-
 }
+
 
 
 
@@ -240,6 +233,8 @@ void processLightSensor(int rawValue, int sensor_id) {
     }
     else if (prevState != STATE_STABLE_COVERED && rawValue < 175 && (lastTriggered[sensor_id] + 1000 * 1) < currTime) {
         is_Music = true;
+            Serial.println("playing the muse");
+
         currState = STATE_STABLE_COVERED;
         currentStateArr[sensor_id] = currState;
         lastTriggered[sensor_id] = currTime;
@@ -288,25 +283,27 @@ void SENSOR_LoopTask(void *arg) {
 }
 
 static void bar1_update_cb(lv_timer_t * timer) {
-    lv_obj_t * bar = (lv_obj_t *)(timer->user_data);
-    // Replace 'new_value' with your actual data source (e.g., sensor reading)
-    lv_bar_set_value(ui_Bar1, lightState[0], LV_ANIM_OFF); 
+    lv_bar_set_value(ui_Bar1, lightState[0], LV_ANIM_ON); 
+    lv_bar_set_value(ui_Bar2, lightState[1], LV_ANIM_ON); 
+    lv_bar_set_value(ui_Bar3, lightState[2], LV_ANIM_ON); 
+    lv_bar_set_value(ui_Bar4, lightState[3], LV_ANIM_ON); 
+
 }
 
 static void bar2_update_cb(lv_timer_t * timer) {
-    lv_obj_t * bar = (lv_obj_t *)(timer->user_data);
+lv_obj_t * bar = (lv_obj_t *)lv_timer_get_user_data(timer);
     // Replace 'new_value' with your actual data source (e.g., sensor reading)
     lv_bar_set_value(ui_Bar2, lightState[1], LV_ANIM_OFF); 
 }
 
 static void bar3_update_cb(lv_timer_t * timer) {
-    lv_obj_t * bar = (lv_obj_t *)(timer->user_data);
+lv_obj_t * bar = (lv_obj_t *)lv_timer_get_user_data(timer);
     // Replace 'new_value' with your actual data source (e.g., sensor reading)
     lv_bar_set_value(ui_Bar3, lightState[2], LV_ANIM_OFF); 
 }
 
 static void bar4_update_cb(lv_timer_t * timer) {
-    lv_obj_t * bar = (lv_obj_t *)(timer->user_data);
+lv_obj_t * bar = (lv_obj_t *)lv_timer_get_user_data(timer);
     // Replace 'new_value' with your actual data source (e.g., sensor reading)
     lv_bar_set_value(ui_Bar4, lightState[3], LV_ANIM_OFF); 
 }
@@ -477,9 +474,6 @@ void DISPLAY_LoopTask(void *arg) {
 }
 void setupBarTimers() {
   lv_timer_create(bar1_update_cb, 80, ui_Bar1);
-  lv_timer_create(bar2_update_cb, 80, ui_Bar2);
-  lv_timer_create(bar3_update_cb, 80, ui_Bar3);
-  lv_timer_create(bar4_update_cb, 80, ui_Bar4);
 }
 
 void setup()
@@ -487,20 +481,21 @@ void setup()
   audio_ptr = (uint8_t *)heap_caps_malloc(288 * 1000 * sizeof(uint8_t), MALLOC_CAP_SPIRAM);
   assert(audio_ptr);
   Serial.begin(115200);
+  Serial.println("Hello world");
   delay(300);
 
 
    RlcdPort.RLCD_Init();
-   Lvgl_PortInit(400, 300, Lvgl_FlushCallback);
-   if (Lvgl_lock(-1)) {
-// //    setup_ui(&init_ui);
-//     // lv_label_set_text(init_ui.screen_label_1, "等待操作");
-//     // lv_label_set_text(init_ui.screen_label_2, "IDLE");
-     ui_init();
-     init_gpio_input();  
-    setupBarTimers();
+     Serial.println("attempting port");
 
-     Lvgl_unlock();
+   Lvgl_PortInit(400, 300, Lvgl_FlushCallback);
+     Serial.println("attempting lvgl");
+
+   if (Lvgl_lock(-1)) {
+    ui_init();
+    //init_gpio_input();  
+    //setupBarTimers();
+    Lvgl_unlock();
 
    }
 
@@ -568,6 +563,7 @@ void loopLightsensors() {
 void loop()
 {
   lv_timer_handler();
+  vTaskDelay(pdMS_TO_TICKS(100));
   //loopSwitches();
   //loopLightsensors();
 
