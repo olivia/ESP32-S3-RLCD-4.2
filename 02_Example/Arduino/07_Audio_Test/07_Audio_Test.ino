@@ -140,7 +140,7 @@ void setup() {
   codecport->CodecPort_SetSpeakerVol(100);
   codecport->CodecPort_SetMicGain(35);
   RlcdPort.RLCD_Init();
-  Lvgl_PortInit(400, 300, Lvgl_FlushCallback);
+  Lvgl_PortInit(300, 300, Lvgl_FlushCallback);
   if (Lvgl_lock(-1)) {
     setup_ui(&init_ui);
     lv_label_set_text(init_ui.screen_label_1, "等待操作");

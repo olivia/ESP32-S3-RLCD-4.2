@@ -3,16 +3,20 @@
 // LVGL version: 9.3
 // Project name: SquareLine_Projecttest
 
-#ifndef _SQUARELINE_PROJECTTEST_UI_COMP_HOOK_H
-#define _SQUARELINE_PROJECTTEST_UI_COMP_HOOK_H
+#ifndef _UI_COMP_BLICON_H
+#define _UI_COMP_BLICON_H
+
+#include "ui.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void ui_comp_Bar_create_hook( lv_obj_t *comp );
-void ui_comp_blicon_create_hook( lv_obj_t *comp );
-void ui_comp_player_create_hook( lv_obj_t *comp );
+// COMPONENT blicon
+#define UI_COMP_BLICON_BLICON 0
+#define UI_COMP_BLICON_BLIMG 1
+#define _UI_COMP_BLICON_NUM 2
+lv_obj_t *ui_blicon_create(lv_obj_t *comp_parent);
 
 #ifdef __cplusplus
 } /*extern "C"*/

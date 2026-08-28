@@ -9,7 +9,10 @@ extern "C" {
 
 extern EventGroupHandle_t BootButtonGroups;
 extern EventGroupHandle_t GP18ButtonGroups;
-
+extern EventGroupHandle_t TRButtonGroups;
+extern EventGroupHandle_t TLButtonGroups;
+extern EventGroupHandle_t BRButtonGroups;
+extern EventGroupHandle_t BLButtonGroups;
 
 #define set_bit_button(x) ((uint32_t)(0x01)<<(x))
 #define get_bit_button(x,y) (((uint32_t)(x)>>(y)) & 0x01)
@@ -21,8 +24,9 @@ extern EventGroupHandle_t GP18ButtonGroups;
 #define clr_bit_data(x,y) (x &= ~(0x01<<y))
 #define get_bit_data(x,y) ((x>>y) & 0x01)
 #define rset_bit_data(x) ((uint32_t)0x01<<(x))
-
+extern int switchState[];
 void Custom_ButtonInit(void);
+void Multiplexer_ButtonInit(void);
 
 #ifdef __cplusplus
 }

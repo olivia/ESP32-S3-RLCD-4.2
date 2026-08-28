@@ -34,9 +34,17 @@ extern "C" {
 #include "ui_Screen2.h"
 
 ///////////////////// VARIABLES ////////////////////
+extern lv_anim_t * floatup_Animation( lv_obj_t *TargetObject, int delay);
+extern lv_anim_t * floatdown_Animation( lv_obj_t *TargetObject, int delay);
 
 // EVENTS
 extern lv_obj_t *ui____initial_actions0;
+
+// IMAGES AND IMAGE SETS
+LV_IMG_DECLARE( ui_img_buttoncorner6x6tl_png);   // assets/buttoncorner6x6tl.png
+LV_IMG_DECLARE( ui_img_buttoncorner6x6tr_png);   // assets/buttoncorner6x6tr.png
+LV_IMG_DECLARE( ui_img_buttoncorner6x6_png);   // assets/buttoncorner6x6.png
+LV_IMG_DECLARE( ui_img_buttoncorner6x6br_png);   // assets/buttoncorner6x6br.png
 
 // FONTS
 LV_FONT_DECLARE( ui_font_windylg);

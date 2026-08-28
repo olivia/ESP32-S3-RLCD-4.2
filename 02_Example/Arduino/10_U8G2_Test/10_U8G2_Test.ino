@@ -6,7 +6,7 @@
 #include "i2c_bsp.h"
 #include "codec_bsp.h"
 #include "ST7305_U8g2.h"
-#include "maru.c"
+#include <esp_timer.h>
 #define U8G2_USE_LARGE_FONTS
 #define LCD_WIDTH 400
 #define LCD_HEIGHT 300
@@ -21,7 +21,7 @@
 
 static ST7305_U8g2 lcd(RLCD_SCK_PIN, RLCD_MOSI_PIN, RLCD_DC_PIN, RLCD_CS_PIN, RLCD_RST_PIN);
 static U8G2 *u8g2 = nullptr;
-static int switchState[] = {0,0,0,0};
+//static int switchState[] = {0,0,0,0};
 static int lightState[] = {0,0,0,0};
 
 static uint32_t counter = 0;
@@ -45,39 +45,42 @@ EventGroupHandle_t CodecGroups;
 DisplayPort RlcdPort(12, 11, 5, 40, 41, 400, 300);
 
 static void Lvgl_FlushCallback(lv_display_t *drv, const lv_area_t *area, uint8_t *color_map) {
+  int64_t t_start = esp_timer_get_time();
+  int pixel_count = 0;
   uint16_t *buffer = (uint16_t *)color_map;
   for (int y = area->y1; y <= area->y2; y++) {
     for (int x = area->x1; x <= area->x2; x++) {
       uint8_t color = (*buffer < 0x7fff) ? ColorBlack : ColorWhite;
       RlcdPort.RLCD_SetPixel(x, y, color);
       buffer++;
+            pixel_count++;
+
     }
   }
+    int64_t t_math_done = esp_timer_get_time();
+
   RlcdPort.RLCD_Display();
+    int64_t t_spi_done = esp_timer_get_time();
+  int32_t math_ms = (int32_t)(t_math_done - t_start) / 1000;
+  int32_t spi_ms  = (int32_t)(t_spi_done - t_math_done) / 1000;
+  int32_t total_ms = (int32_t)(t_spi_done - t_start) / 1000;
+
+  // Print results to the serial terminal every 30 frames
+  // static int diagnostic_counter = 0;
+  // if (++diagnostic_counter >= 30) {
+  //   diagnostic_counter = 0;
+  //   Serial.printf("[DIAGNOSTIC] Window: (%d,%d) to (%d,%d) | Total Pixels: %d\n", 
+  //          area->x1, area->y1, area->x2, area->y2, pixel_count);
+  //   Serial.printf("             -> Loop Processing Math : %d ms\n", math_ms);
+  //   Serial.printf("             -> SPI Bus Transmission : %d ms\n", spi_ms);
+  //   Serial.printf("             -> Total Driver Staging : %d ms\n", total_ms);
+  // }
+
   lv_disp_flush_ready(drv);
 }
 
 
 
-static void drawCenteredUTF8X2(int y, const char *text)
-{
-  int text_width = u8g2->getUTF8Width(text);
-  int x = (240 - text_width*2) / 2;
-  if (x < 0) {
-    x = 0;
-  }
-  u8g2->drawUTF8X2(x+tCX, y, text);
-}
-
-static void drawCenteredStr(int y, const char *text)
-{
-  int text_width = u8g2->getStrWidth(text);
-  int x = (LCD_WIDTH - text_width) / 2;
-  if (x < 0) {
-    x = 0;
-  }
-  u8g2->drawStr(x, y, text);
-}
 
 //s0-3
 int selectPins[] =
@@ -89,64 +92,14 @@ int signalPin = 17;
 
 int n = sizeof(selectPins)/sizeof(selectPins[0]);
 
-// Global variable for your input device
-lv_indev_t * indev_keypad;
 
-void gpio_keypad_read_cb(lv_indev_t * indev, lv_indev_data_t * data) {
-  data->state = LV_INDEV_STATE_RELEASED; // Default state
-
-  const uint32_t target_keys[] = {
-    LV_KEY_NEXT,
-    LV_KEY_PREV,
-    LV_KEY_UP,
-    LV_KEY_DOWN
-  };
-
-  for(int i=0; i<4; i++)
-  {
-    if (switchState[i]) {
-        data->state = LV_INDEV_STATE_PRESSED;
-        data->key = target_keys[i];
-        uint32_t pressed_key = LV_KEY_NEXT;
-        
-        // CHANGED: lv_scr_act() is replaced by lv_screen_active() in v9
-lv_obj_t * current_screen = lv_screen_active();
-lv_obj_send_event(current_screen, LV_EVENT_KEY, &pressed_key);
-        break; // Added break to stop checking once a pressed key is handled
-    } else {
-      data->state = LV_INDEV_STATE_RELEASED;
-    }
-  }
-}
-
-void init_gpio_input(void) {
-    // 1. CHANGED: Directly create the input device object
-    indev_keypad = lv_indev_create();
-    
-    // 2. CHANGED: Configure the input device using specific setter functions
-    lv_indev_set_type(indev_keypad, LV_INDEV_TYPE_KEYPAD);
-    lv_indev_set_read_cb(indev_keypad, gpio_keypad_read_cb);
-
-    // 3. Create an object group and assign it to the input device
-    lv_group_t * g = lv_group_create();
-    lv_indev_set_group(indev_keypad, g);
-
-    // Add the PANEL widget inside the screen
-    lv_group_add_obj(g, ui_Panel1); 
-    lv_group_focus_obj(ui_Panel1);
-    lv_group_focus_freeze(g, true); 
-}
-
-
-
+bool modalOpen = false;
 
 void BOOT_LoopTask(void *arg) {
   for (;;) {
     EventBits_t even = xEventGroupWaitBits(BootButtonGroups, (0x01 | 0x02 | 0x04), pdTRUE, pdFALSE, pdMS_TO_TICKS(2000));
     if (even & 0x01) {
-      xEventGroupSetBits(CodecGroups, 0x02);
     } else if (even & 0x02) {
-      xEventGroupSetBits(CodecGroups, 0x01);
     }
   }
 }
@@ -167,7 +120,6 @@ void Codec_LoopTask(void *arg) {
       codecport->CodecPort_SetSpeakerVol(90);
       uint32_t bytes_sizt;
       size_t bytes_write = 0;
-      Serial.printf("attempting to get %d", index);
       uint8_t *data_ptr = codecport->CodecPort_GetPcmData(&bytes_sizt, index);
       while (bytes_write < bytes_sizt) {
         codecport->CodecPort_PlayWrite(data_ptr, 256);
@@ -187,7 +139,7 @@ void KEY_LoopTask(void *arg) {
     EventBits_t even = xEventGroupWaitBits(GP18ButtonGroups, (0x01 | 0x02 | 0x04), pdTRUE, pdFALSE, pdMS_TO_TICKS(2000));
     if (even & 0x01) {
       // is_Music = false;
-      // Serial.println("Press button");
+       Serial.println("Press button");
       is_Music = true;
       xEventGroupSetBits(CodecGroups, 0x04);
     } else if (even & 0x02) {
@@ -197,6 +149,112 @@ void KEY_LoopTask(void *arg) {
     }
   }
 }
+
+void TL_LoopTask(void *arg) {
+  for (;;) {
+    EventBits_t even = xEventGroupWaitBits(TLButtonGroups, (0x01 | 0x02 | 0x04), pdTRUE, pdFALSE, pdMS_TO_TICKS(2000));
+    if (even & 0x01) {
+      Serial.println("TL Click");
+    } else if (even & 0x02) {
+      Serial.println("TL DClick");
+      if (Lvgl_lock(-1)) {
+        lv_obj_t * current_screen = lv_screen_active();
+        uint32_t pressed_key = LV_KEY_NEXT;
+        lv_obj_send_event(current_screen, LV_EVENT_KEY, &pressed_key);
+        Lvgl_unlock();
+
+      }
+    } else if (even & 0x04) {
+      if (Lvgl_lock(-1)) {
+        lv_obj_set_style_transform_rotation(ui_modalcontainer,1800, LV_PART_MAIN| LV_STATE_DEFAULT);
+        lv_obj_update_layout(ui_modalcontainer); 
+
+        Lvgl_unlock();
+      }
+    }
+  }
+}
+
+void TR_LoopTask(void *arg) {
+  for (;;) {
+    
+    EventBits_t even = xEventGroupWaitBits(TRButtonGroups, (0x01 | 0x02 | 0x04), pdTRUE, pdFALSE, pdMS_TO_TICKS(2000));
+
+    if (even & 0x01) {
+          Serial.println("TR Click");
+
+      if (Lvgl_lock(-1)) {
+        lv_obj_t * current_screen = lv_screen_active();
+        lv_obj_t * next_screen = NULL;
+
+        // 1. Identify which screen is currently on the display
+        if (current_screen == ui_Screen1) {
+            next_screen = ui_Screen2;
+        } 
+        else if (current_screen == ui_Screen2) {
+            next_screen = ui_Screen1;
+        } 
+        // 2. Perform the safe transition if a target was found
+        if (next_screen != NULL) {
+          lv_screen_load_anim(next_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
+        }
+
+        Lvgl_unlock();
+      }
+    } else if (even & 0x02) {
+      Serial.println("TR Double Click");
+
+    } else if (even & 0x04) {
+      if (Lvgl_lock(-1)) {
+        lv_obj_set_style_transform_rotation(ui_modalcontainer,2700, LV_PART_MAIN| LV_STATE_DEFAULT);
+            lv_obj_update_layout(ui_modalcontainer); 
+
+        Lvgl_unlock();
+      }
+    }
+  }
+}
+void BR_LoopTask(void *arg) {
+  for (;;) {
+    EventBits_t even = xEventGroupWaitBits(BRButtonGroups, (0x01 | 0x02 | 0x04), pdTRUE, pdFALSE, pdMS_TO_TICKS(2000));
+    if (even & 0x01) {
+      Serial.println("BR Click");
+    } else if (even & 0x02) {
+      Serial.println("BR DClick");
+    } else if (even & 0x04) {
+      modalOpen = !modalOpen;
+      if (Lvgl_lock(-1)) {
+        lv_obj_set_style_transform_rotation(ui_modalcontainer,0, LV_PART_MAIN| LV_STATE_DEFAULT);
+
+        if (modalOpen) {
+          floatup_Animation(ui_modal,0);
+        } else {
+          floatdown_Animation(ui_modal, 0);
+        }
+        Lvgl_unlock();
+      }
+    }
+  }
+}
+
+void BL_LoopTask(void *arg) {
+  for (;;) {
+    EventBits_t even = xEventGroupWaitBits(BLButtonGroups, (0x01 | 0x02 | 0x04), pdTRUE, pdFALSE, pdMS_TO_TICKS(2000));
+    if (even & 0x01) {
+      Serial.println("BL Click");
+    } else if (even & 0x02) {
+      Serial.println("BL DClick");
+    } else if (even & 0x04) {
+      if (Lvgl_lock(-1)) {
+        lv_obj_set_style_transform_rotation(ui_modalcontainer,900, LV_PART_MAIN| LV_STATE_DEFAULT);
+            lv_obj_update_layout(ui_modalcontainer); 
+
+        Lvgl_unlock();
+      }
+    }
+  }
+}
+
 #define LIGHT_SENSORS_COUNT 4
 typedef enum {
     STATE_STABLE_COVERED       = 5, // Light is low and steady (covered)
@@ -266,7 +324,7 @@ void SENSOR_LoopTask(void *arg) {
       digitalWrite(selectPins[2], s2);
       digitalWrite(selectPins[3], s3);
       vTaskDelay(xSettleDelay);
-      switchState[i-12] = analogRead(signalPin)<2048;
+      switchState[i-12] = analogRead(signalPin)>2048;
     }
     for(int i=8; i<12; i++)
     {
@@ -288,6 +346,7 @@ void SENSOR_LoopTask(void *arg) {
 }
 
 static void bar1_update_cb(lv_timer_t * timer) {
+
     lv_bar_set_value(ui_Bar1, lightState[0], LV_ANIM_ON); 
     lv_bar_set_value(ui_Bar2, lightState[1], LV_ANIM_ON); 
     lv_bar_set_value(ui_Bar3, lightState[2], LV_ANIM_ON); 
@@ -332,23 +391,6 @@ static void bar1_update_cb(lv_timer_t * timer) {
 
 }
 
-static void bar2_update_cb(lv_timer_t * timer) {
-lv_obj_t * bar = (lv_obj_t *)lv_timer_get_user_data(timer);
-    // Replace 'new_value' with your actual data source (e.g., sensor reading)
-    lv_bar_set_value(ui_Bar2, lightState[1], LV_ANIM_OFF); 
-}
-
-static void bar3_update_cb(lv_timer_t * timer) {
-lv_obj_t * bar = (lv_obj_t *)lv_timer_get_user_data(timer);
-    // Replace 'new_value' with your actual data source (e.g., sensor reading)
-    lv_bar_set_value(ui_Bar3, lightState[2], LV_ANIM_OFF); 
-}
-
-static void bar4_update_cb(lv_timer_t * timer) {
-lv_obj_t * bar = (lv_obj_t *)lv_timer_get_user_data(timer);
-    // Replace 'new_value' with your actual data source (e.g., sensor reading)
-    lv_bar_set_value(ui_Bar4, lightState[3], LV_ANIM_OFF); 
-}
 
 
 const char* const utf8Labels[] = {
@@ -368,154 +410,8 @@ const unsigned long interval = 2000; // Interval in milliseconds (1 second)
 
 
 
-void DISPLAY_LoopTask(void *arg) {
-    
-  for (;;) {
-    char text[80];
-    uint32_t frame_start_us = micros();
-    int round = (millis() % (interval* labelCount))/2000;
-    int rotateOffset = round&3;
-
-
-    u8g2->clearBuffer();
-
-
-    int number_height = u8g2->getAscent() - u8g2->getDescent();
-    int number_y = ((LCD_HEIGHT - number_height) / 2) + u8g2->getAscent();
-    // drawCenteredStr(number_y, text);
-
-    u8g2->setFont(u8g2_font_ncenB08_tr);	// choose a suitable font
-
-    //u8g2->drawFrame(80, 10, 290, 290);
-
-    u8g2->setFont(u8g2_font_6x13_tf);
-    // drawCenteredStr(number_y + 26, "ST7305 refresh counter");
-    // snprintf(text, sizeof(text), "FPS:%lu.%02lu  frame:%lums  flush:%lums",
-    //          (unsigned long)(fps_x100 / 100),
-    //          (unsigned long)(fps_x100 % 100),
-    //          (unsigned long)(frame_us / 1000),
-    //          (unsigned long)(flush_us / 1000));
-    
-    // u8g2->drawStr(20, 282, text);
-    //vertical
-    u8g2->drawFrame(60, 60, 10, 180);
-    u8g2->drawFrame(330, 60, 10, 180);
-    //horizontal
-    u8g2->drawFrame(110, 10, 180, 10);
-    u8g2->drawFrame(110, 277, 180, 10);
-
-
-    //vertical
-    u8g2->drawBox(60, 60, 10, lightState[3]);
-    u8g2->setCursor(80,100);
-    u8g2->print( currentStateArr[3]);
-
-    u8g2->drawBox(330, 60, 10, lightState[0]);
-        u8g2->setCursor(310,100);
-
-    u8g2->print( currentStateArr[0]);
-    //horizontal
-    u8g2->drawBox(110, 10, lightState[1],10);
-        u8g2->setCursor(200,20);
-
-    u8g2->print( currentStateArr[1]);
-
-    u8g2->drawBox(110, 277, lightState[2],10);
-    u8g2->setCursor(200,250);
-    u8g2->print( currentStateArr[2]);
-
-
-    if (switchState[0]) {
-      u8g2->drawDisc(bCX, bCY, CIRCLE_RAD);
-    } else {
-      u8g2->drawCircle(bCX, bCY, CIRCLE_RAD);
-    }
-    if (switchState[1]) {
-      u8g2->drawDisc(bCX, tCY, CIRCLE_RAD);
-    } else {
-      u8g2->drawCircle(bCX, tCY, CIRCLE_RAD);
-    }
-
-    if (switchState[2]) {
-      u8g2->drawDisc(tCX, tCY, CIRCLE_RAD);
-    } else {
-      u8g2->drawCircle(tCX, tCY, CIRCLE_RAD);
-    }
-    if (switchState[3]) {
-      u8g2->drawDisc(tCX, bCY, CIRCLE_RAD);
-    } else {
-      u8g2->drawCircle(tCX, bCY, CIRCLE_RAD);
-    }
-
-    u8g2->setDrawColor(2);
-    u8g2->setFontMode(1);  /* activate transparent font mode */
-
-    int offset = 7;
-    int directions[] = {0x6771,0x5357,0x897F,0x5317};
-    snprintf(text, sizeof(text), "%lu", (unsigned long)counter);
-    u8g2->setFont(maru8g2); 
-    // u8g2->setFont(u8g2_font_unifont_t_chinese2); 
-    u8g2->setFontDirection(0);
-    // East
-    u8g2->drawGlyph(bCX-offset, bCY+offset, directions[(8-rotateOffset)&3]);
-    u8g2->setFontDirection(3);
-
-    // South
-    u8g2->drawGlyph(bCX+offset, tCY+offset, directions[((8-rotateOffset+1)&3)]);
-      u8g2->setFontDirection(2);
-
-    // West
-    u8g2->drawGlyph(tCX+offset, tCY-offset, directions[(8-rotateOffset+2)&3]);
-      u8g2->setFontDirection(1);
-
-    // North
-    u8g2->drawGlyph(tCX-offset, bCY-offset, directions[(8-rotateOffset+3)&3]);
-      u8g2->setFontDirection(0);
-
-    u8g2->setDrawColor(1);
-
-    drawCenteredUTF8X2((tCY+bCY)/2, utf8Labels[round]);
-
-    u8g2->setFontMode(0);  /* activate transparent font mode */
-
-
-
-
-    uint32_t flush_start_us = micros();
-    u8g2->sendBuffer();
-    uint32_t now_us = micros();
-
-    flush_us = now_us - flush_start_us;
-    frame_us = now_us - frame_start_us;
-    counter++;
-    frames++;
-
-    uint32_t now_ms = millis();
-    uint32_t elapsed_ms = now_ms - last_report_ms;
-    if (elapsed_ms >= 1000) {
-      uint32_t delta_frames = frames - last_report_frames;
-      fps_x100 = (uint32_t)((uint64_t)delta_frames * 100000ULL / elapsed_ms);
-      /*
-      Serial.printf("counter=%lu fps=%lu.%02lu frame=%lu us flush=%lu us\r\n",
-                    (unsigned long)counter,
-                    (unsigned long)(fps_x100 / 100),
-                    (unsigned long)(fps_x100 % 100),
-                    (unsigned long)frame_us,
-                    (unsigned long)flush_us);
-      */
-      last_report_ms = now_ms;
-      last_report_frames = frames;
-    }
-
-    if ((frames % 16) == 0) {
-      delay(1);
-    } else {
-      yield();
-    }
-  }
-}
 void setupBarTimers() {
-  lv_timer_create(bar1_update_cb, 80, ui_Bar1);
+ lv_timer_create(bar1_update_cb, 80, ui_Bar1);
 }
 
 void setupPlayers() {
@@ -541,35 +437,37 @@ void setup()
    RlcdPort.RLCD_Init();
      Serial.println("attempting port");
 
-   Lvgl_PortInit(400, 300, Lvgl_FlushCallback);
+   Lvgl_PortInit(300, 300, Lvgl_FlushCallback);
      Serial.println("attempting lvgl");
 
    if (Lvgl_lock(-1)) {
     ui_init();
     setupPlayers();
-    init_gpio_input();  
     setupBarTimers();
     Lvgl_unlock();
 
    }
 
   
-  // lcd.begin(0, U8G2_R1);
-  //  u8g2 = lcd.getU8g2();
-  // u8g2->enableUTF8Print(); 
 
   last_report_ms = millis();
   CodecGroups = xEventGroupCreate();
   Custom_ButtonInit();
+  Multiplexer_ButtonInit();
   codecport = new CodecPort(I2cbus, "S3_RLCD_4_2");
   codecport->CodecPort_SetInfo("es8311 & es7210", 1, 16000, 2, 16);
   codecport->CodecPort_SetSpeakerVol(100);
   codecport->CodecPort_SetMicGain(35);
-  xTaskCreatePinnedToCore(BOOT_LoopTask, "BOOT_LoopTask", 4 * 1024, NULL, 2, NULL, 1);
+  //xTaskCreatePinnedToCore(BOOT_LoopTask, "BOOT_LoopTask", 4 * 1024, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(KEY_LoopTask, "KEY_LoopTask", 4 * 1024, NULL, 2, NULL, 1);
+  xTaskCreatePinnedToCore(TL_LoopTask, "TL_LoopTask", 4 * 1024, NULL, 2, NULL, 1);
+  xTaskCreatePinnedToCore(TR_LoopTask, "TR_LoopTask", 4 * 1024, NULL, 2, NULL, 1);
+
+  xTaskCreatePinnedToCore(BR_LoopTask, "BR_LoopTask", 4 * 1024, NULL, 2, NULL, 1);
+  xTaskCreatePinnedToCore(BL_LoopTask, "BL_LoopTask", 4 * 1024, NULL, 2, NULL, 1);
+
   xTaskCreatePinnedToCore(Codec_LoopTask, "Codec_LoopTask", 4 * 1024, NULL, 4, NULL, 1);
   xTaskCreatePinnedToCore(SENSOR_LoopTask, "SENSOR_LoopTask", 4 * 1024, NULL, 4, NULL, 1);
-  //xTaskCreatePinnedToCore(DISPLAY_LoopTask, "DISPLAY_LoopTask", 5 * 1024, NULL, 4, NULL,1);
 
   for(int i=0; i<n; i++)
   {
@@ -616,9 +514,5 @@ void loopLightsensors() {
 
 void loop()
 {
-  lv_timer_handler();
-  vTaskDelay(pdMS_TO_TICKS(100));
-  //loopSwitches();
-  //loopLightsensors();
 
 }

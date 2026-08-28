@@ -12,3 +12,7 @@ void ui_comp_Bar_create_hook( lv_obj_t * comp)
 void ui_comp_player_create_hook( lv_obj_t * comp)
 {
 }
+
+void ui_comp_blicon_create_hook( lv_obj_t * comp)
+{
+}

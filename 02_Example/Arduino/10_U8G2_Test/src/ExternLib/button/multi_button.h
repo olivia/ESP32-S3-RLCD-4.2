@@ -63,6 +63,7 @@ struct _Button {
 extern "C" {
 #endif
 
+
 // Public API functions
 void button_init(Button* handle, uint8_t(*pin_level)(uint8_t), uint8_t active_level, uint8_t button_id);
 void button_attach(Button* handle, ButtonEvent event, BtnCallback cb);

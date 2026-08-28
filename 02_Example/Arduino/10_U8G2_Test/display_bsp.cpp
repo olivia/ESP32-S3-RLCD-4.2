@@ -28,7 +28,7 @@ DisplayPort::DisplayPort(int mosi, int scl, int dc, int cs, int rst, int width, 
   esp_lcd_panel_io_spi_config_t io_config = {};
   io_config.dc_gpio_num = dc_;
   io_config.cs_gpio_num = cs_;
-  io_config.pclk_hz = 10 * 1000 * 1000;
+  io_config.pclk_hz = 20 * 1000 * 1000;
   io_config.lcd_cmd_bits = 8;
   io_config.lcd_param_bits = 8;
   io_config.spi_mode = 0;
@@ -220,6 +220,35 @@ void DisplayPort::RLCD_SendData(uint8_t Data) {
 
 void DisplayPort::RLCD_Sendbuffera(uint8_t *Data, int len) {
   ESP_ERROR_CHECK(esp_lcd_panel_io_tx_color(io_handle, -1, Data, len));
+}
+void DisplayPort::RLCD_DisplayWindow(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
+  // 1. Calculate boundaries
+  uint16_t width = (x2 - x1 + 1);
+  uint16_t height = (y2 - y1 + 1);
+  
+  // 2. Program the specific window coordinates into the ST7305 display controller
+  RLCD_SendCommand(0x2A);  // Column Address Set
+  RLCD_SendData(x1 >> 8);
+  RLCD_SendData(x1 & 0xFF);
+  RLCD_SendData(x2 >> 8);
+  RLCD_SendData(x2 & 0xFF);
+
+  RLCD_SendCommand(0x2B);  // Page Address Set
+  RLCD_SendData(y1 >> 8);
+  RLCD_SendData(y1 & 0xFF);
+  RLCD_SendData(y2 >> 8);
+  RLCD_SendData(y2 & 0xFF);
+
+  RLCD_SendCommand(0x2C);  // Memory Write Command
+
+  // 3. Extract the compressed segment out of DispBuffer
+  // Calculating the exact starting byte index depends on your active orientation layout.
+  // For standard layouts, calculate the raw size of this specific block:
+  int window_len = (width * height) / 8;
+  if (window_len <= 0) window_len = 1;
+
+  // Direct asynchronous DMA transmission of the localized pixel window
+  RLCD_Sendbuffera(DispBuffer, window_len); 
 }
 
 void DisplayPort::Set_ResetIOLevel(uint8_t level) {

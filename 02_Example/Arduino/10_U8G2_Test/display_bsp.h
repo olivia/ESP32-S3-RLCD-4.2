@@ -54,5 +54,7 @@ public:
 #endif
 #if (AlgorithmOptimization == 3)
   void RLCD_SetPixel(uint16_t x, uint16_t y, uint8_t color);
+      void RLCD_DisplayWindow(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
+
 #endif
 };

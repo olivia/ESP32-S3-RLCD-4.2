@@ -11,7 +11,7 @@ void ui_event_Screen2( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
 
 if ( event_code == LV_EVENT_KEY &&  lv_event_get_key(e) == LV_KEY_NEXT  ) {
-      _ui_screen_change( &ui_Screen1, LV_SCR_LOAD_ANIM_OUT_RIGHT, 300, 0, &ui_Screen1_screen_init);
+      _ui_screen_change( &ui_Screen1, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_Screen1_screen_init);
 }
 }
 
