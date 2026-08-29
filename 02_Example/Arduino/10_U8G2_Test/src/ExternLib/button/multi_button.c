@@ -10,7 +10,7 @@
 
 // Button handle list head
 static Button* head_handle = NULL;
-
+static int disable_dbl_click = 1;  // Flag to disable double click detection
 // Forward declarations
 static void button_handler(Button* handle);
 static inline uint8_t button_read_level(Button* handle);
@@ -188,7 +188,7 @@ static void button_handler(Button* handle)
 			handle->state = BTN_STATE_REPEAT;
 		} else if (handle->ticks > SHORT_TICKS) {
 			// Timeout reached, determine click type
-			if (handle->repeat == 1) {
+			if (disable_dbl_click || handle->repeat == 1) {
 				handle->event = (uint8_t)BTN_SINGLE_CLICK;
 				EVENT_CB(BTN_SINGLE_CLICK);
 			} else if (handle->repeat == 2) {

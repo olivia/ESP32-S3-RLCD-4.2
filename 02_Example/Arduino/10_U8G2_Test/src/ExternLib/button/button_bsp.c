@@ -172,12 +172,12 @@ void Multiplexer_ButtonInit(void) {
 
     button_init(&TLButton, read_button_multiplexer, BOOT_Active, TL_ID);           
     button_attach(&TLButton, BTN_SINGLE_CLICK, on_tl_single_click);         
-    button_attach(&TLButton, BTN_DOUBLE_CLICK, on_tl_double_click);         
+    //button_attach(&TLButton, BTN_DOUBLE_CLICK, on_tl_double_click);         
     button_attach(&TLButton, BTN_LONG_PRESS_START, on_tl_long_press_start);
 
     button_init(&TRButton, read_button_multiplexer, BOOT_Active, TR_ID);           
     button_attach(&TRButton, BTN_SINGLE_CLICK, on_tr_single_click);         
-    button_attach(&TRButton, BTN_DOUBLE_CLICK, on_tr_double_click);         
+    //button_attach(&TRButton, BTN_DOUBLE_CLICK, on_tr_double_click);         
     button_attach(&TRButton, BTN_LONG_PRESS_START, on_tr_long_press_start);
 
     button_init(&BRButton, read_button_multiplexer, BOOT_Active, BR_ID);           
@@ -187,7 +187,7 @@ void Multiplexer_ButtonInit(void) {
 
     button_init(&BLButton, read_button_multiplexer, BOOT_Active, BL_ID);           
     button_attach(&BLButton, BTN_SINGLE_CLICK, on_bl_single_click);         
-    button_attach(&BLButton, BTN_DOUBLE_CLICK, on_bl_double_click);         
+    //button_attach(&BLButton, BTN_DOUBLE_CLICK, on_bl_double_click);         
     button_attach(&BLButton, BTN_LONG_PRESS_START, on_bl_long_press_start);
     button_start(&TLButton);
     button_start(&TRButton);
