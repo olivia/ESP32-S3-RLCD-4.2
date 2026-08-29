@@ -45,6 +45,9 @@ LV_IMG_DECLARE( ui_img_buttoncorner6x6tl_png);   // assets/buttoncorner6x6tl.png
 LV_IMG_DECLARE( ui_img_buttoncorner6x6tr_png);   // assets/buttoncorner6x6tr.png
 LV_IMG_DECLARE( ui_img_buttoncorner6x6_png);   // assets/buttoncorner6x6.png
 LV_IMG_DECLARE( ui_img_buttoncorner6x6br_png);   // assets/buttoncorner6x6br.png
+LV_IMG_DECLARE( ui_img_leftarrow_png);   // assets/leftarrow.png
+LV_IMG_DECLARE( ui_img_rightarrow_png);   // assets/rightarrow.png
+LV_IMG_DECLARE( ui_img_rightarrow_invert_png);   // assets/rightarrow_invert.png
 
 // FONTS
 LV_FONT_DECLARE( ui_font_windylg);

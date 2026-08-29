@@ -13,6 +13,9 @@ SET(SOURCES ui_comp_bar.c
     ui_img_buttoncorner6x6tr_png.c
     ui_img_buttoncorner6x6_png.c
     ui_img_buttoncorner6x6br_png.c
+    ui_img_leftarrow_png.c
+    ui_img_rightarrow_png.c
+    ui_img_rightarrow_invert_png.c
     fonts/ui_font_windylg.c
     fonts/ui_font_windymed.c)
 

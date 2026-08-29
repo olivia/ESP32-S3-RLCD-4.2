@@ -17,8 +17,12 @@
 #define RLCD_CS_PIN 40
 #define RLCD_RST_PIN 41
 // static lv_ui init_ui;
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
-
+#define MED_MODAL_CONTENT_HEIGHT 125
+static int rotationIndex = 0;
+static int modalContentStep = -1;
 static ST7305_U8g2 lcd(RLCD_SCK_PIN, RLCD_MOSI_PIN, RLCD_DC_PIN, RLCD_CS_PIN, RLCD_RST_PIN);
 static U8G2 *u8g2 = nullptr;
 //static int switchState[] = {0,0,0,0};
@@ -36,11 +40,13 @@ static int tCY = 30;
 static int bCX = 320;
 static int bCY = 267;
 static int CIRCLE_RAD = 20;
+static int modal_state = 0;
 I2cMasterBus I2cbus(14, 13, 0);
 CodecPort *codecport = NULL;
 static uint8_t *audio_ptr = NULL;
 static bool is_Music = true;
 EventGroupHandle_t CodecGroups;
+static bool showSensors = false;
 
 DisplayPort RlcdPort(12, 11, 5, 40, 41, 400, 300);
 
@@ -92,8 +98,434 @@ int signalPin = 17;
 
 int n = sizeof(selectPins)/sizeof(selectPins[0]);
 
+// ESWN
+char* discarders[] = {"olivia", "stephen", "jay", "porrith"}; 
+char* validHan[] = {"1", "2", "3", "4", "5", "6", "7","8", "9", "10", "11", "12", "Y", "2XY", "3XY", "4XY"}; 
+int hanBase[] = {8, 16, 32, 64, 2000, 3000, 3000, 4000, 4000, 4000, 6000, 6000, 8000, 16000, 24000, 32000 };
+int fuMultiplier[] = {20,25,30,40,50,60,70,80,90,100,110, 1};
+char* validFu[] = {"20", "25", "30", "40", "50", "60", "70","80", "90", "100", "110"}; 
+bool modalStepVisited[] = {false, false, false, false, false};
+static int hanIndex = 0;
+static int fuIndex = 0;
+static int discarderIndex = 0;
+// starting from bottom right going counterclockwise
+static int scores[] = {24000, 25000, 25000, 25000};
+static int scoreOffsets[] = {0, 0, 0, 0};
 
 bool modalOpen = false;
+static int winType = -1;
+
+void resetModalStepHistory() {
+  size_t length = sizeof(modalStepVisited) / sizeof(modalStepVisited[0]);
+  for (int i = 0; i< length; i++) {
+    modalStepVisited[i] = false;
+  }
+}
+
+
+bool isUpgradedMangan(int hanIndex, int fuIndex) {
+  return (hanIndex == 3 && fuIndex >= 3 ) || (hanIndex == 2 && fuIndex >= 6);
+}
+
+int getRonScore(int hanIndex, int fuIndex) {
+  int multiplier = !rotationIndex ? 6 : 4;
+  if (hanIndex >= 4) {
+    return multiplier * hanBase[hanIndex]; 
+  } else if (isUpgradedMangan(hanIndex, fuIndex)){
+    return multiplier * hanBase[4];
+  } else {
+    return multiplier * fuMultiplier[fuIndex] * hanBase[hanIndex]; 
+  }
+}
+
+int roundScore(int score) {
+  int scoreOffset = score % 100 ? 1: 0;
+  int flooredScore = score/100;
+  Serial.printf("score %d", flooredScore);
+  return 100 * (flooredScore + scoreOffset);
+}
+
+void applyTsumoOffsets(int playerId, int dealerScore, int nonDealerScore ) {
+  for (int i = 0; i < 4; i++) {
+    if (playerId == i) {
+      scoreOffsets[i] = dealerScore + nonDealerScore * 2;
+    } else {
+      scoreOffsets[i] = (!i) ? -dealerScore : -nonDealerScore; 
+    }
+  }
+}
+
+void setupStepValues(int step) {
+  if (step == 4) {
+    if (hanIndex >= 4) {
+      lv_obj_add_flag(ui_fucontainerdetail, LV_OBJ_FLAG_HIDDEN);
+    } else {
+      lv_obj_remove_flag(ui_funumdetail, LV_OBJ_FLAG_HIDDEN);
+      lv_label_set_text(ui_funumdetail, validFu[fuIndex]);
+    }
+    lv_label_set_text(ui_handetails, validHan[hanIndex]);
+
+    if (rotationIndex && winType == 1) {
+      lv_obj_remove_flag(ui_auxpayerdetail, LV_OBJ_FLAG_HIDDEN);
+    } else {
+      lv_obj_add_flag(ui_auxpayerdetail, LV_OBJ_FLAG_HIDDEN);
+    }
+    int score = getRonScore(hanIndex,fuIndex);
+    if (!winType) {
+      // RON
+      char payerScore[100];
+      int payerScoreNum = roundScore(score);
+      sprintf(payerScore, "%d", payerScoreNum);
+      scoreOffsets[rotationIndex] = payerScoreNum;
+      scoreOffsets[discarderIndex] = -payerScoreNum;
+      lv_label_set_text(ui_payernamedetail, discarders[discarderIndex]);
+      lv_label_set_text(ui_payerscoredetail, payerScore);
+    } else if (winType == 1 && !rotationIndex) {
+      // DEALER TSUMO
+      char payerScore[100];
+      int payerScoreNum = roundScore(score/3);
+      int winnerScoreNum = payerScoreNum * 3;
+      applyTsumoOffsets(rotationIndex, payerScoreNum, payerScoreNum);
+      sprintf(payerScore, "%d", roundScore(score/3));
+      lv_label_set_text(ui_payernamedetail, "ALL");
+      lv_label_set_text(ui_payerscoredetail, payerScore);
+
+    } else if (winType == 1 && rotationIndex) {
+      char dealerScore[100];
+      char nonDealerScore[100];
+      int nonDealerScoreNum = roundScore(score/4);
+      int dealerScoreNum = roundScore(score/2);
+      int winnerScoreNum = nonDealerScoreNum * 2 + dealerScoreNum;
+      applyTsumoOffsets(rotationIndex, dealerScoreNum, nonDealerScoreNum);
+      sprintf(dealerScore, "%d", dealerScoreNum);
+      sprintf(nonDealerScore, "%d", nonDealerScoreNum);
+
+      // NON-DEALER TSUMO
+      lv_label_set_text(ui_payernamedetail, "DEALER");
+      lv_label_set_text(ui_auxpayernamedetail, "NON-DEALER");
+      lv_label_set_text(ui_payerscoredetail, dealerScore);
+      lv_label_set_text(ui_auxpayerscoredetail, nonDealerScore);
+    }
+    repaintPlayers();
+  }
+}
+void initStepValues(int step) {
+  switch (step) {
+    case 1: 
+      hanIndex = 0;
+      lv_label_set_text(ui_hancount, validHan[hanIndex]);
+      break;
+    case 2:
+      fuIndex = 2;
+      lv_label_set_text(ui_fucount, validFu[fuIndex]);
+      break;
+    case 3:
+      discarderIndex = (rotationIndex +1) & 3;
+      lv_label_set_text(ui_discarder, discarders[discarderIndex]);
+      break;
+    case 4:
+      break;
+    default:
+      break;
+  }
+}
+
+void setRotation(int rotIdx) {
+  rotationIndex = rotIdx;
+  lv_obj_set_style_transform_rotation(ui_modalcontainer,(3600 - 900 * rotIdx) % 3600, LV_PART_MAIN| LV_STATE_DEFAULT);
+  lv_obj_update_layout(ui_modalcontainer); 
+}
+
+void transitionToStep(int nextStep) {
+  lv_obj_t * prevStepUI = getModalStepContent(modalContentStep);
+  lv_obj_t * nextStepUI = getModalStepContent(nextStep);
+  if (prevStepUI) {
+    lv_obj_add_flag(prevStepUI, LV_OBJ_FLAG_HIDDEN);
+  }
+  if (!nextStepUI) {
+    lv_obj_add_flag(ui_modalcontainer, LV_OBJ_FLAG_HIDDEN);
+    resetModalStepHistory();
+  } else {
+    lv_obj_remove_flag(nextStepUI, LV_OBJ_FLAG_HIDDEN);
+  }
+  modalContentStep = nextStep;
+  if (!modalStepVisited[nextStep] && nextStep >= 0) {
+    initStepValues(nextStep);
+    modalStepVisited[nextStep] = true;
+  }
+  setupStepValues(nextStep);
+}
+
+lv_obj_t * getModalStepContent(int index) {
+  switch (index) {
+    case 0:
+      return ui_win1;
+      break;
+    case 1:
+      return ui_win2;
+      break;
+    case 2:
+      return ui_win3;
+      break;
+    case 3:
+      return ui_win4;
+      break;
+    case 4:
+      return ui_win5;
+      break;
+    default:
+      return NULL;
+  }
+}
+void handleModalStep1(int button) {
+  switch(button) {
+    case 0:
+      winType = 2;
+      transitionToStep(1);
+      break;
+    case 1:
+      // Ron
+      winType = 0;
+      transitionToStep(1);
+      break;
+    case 2:
+      // Tsumo
+      winType = 1;
+      transitionToStep(1);
+      break;
+    case 3:
+      lv_obj_add_flag(getModalStepContent(0), LV_OBJ_FLAG_HIDDEN);
+      lv_obj_add_flag(ui_modalcontainer, LV_OBJ_FLAG_HIDDEN);
+      modalContentStep--;
+      break;
+    default: 
+      break;
+  }
+
+}
+void handleModalStep2(int button) {
+  bool skipDiscard = !!winType;
+  bool skipFu = hanIndex >= 4;
+  switch(button) {
+    case 0:
+      transitionToStep(skipFu ? skipDiscard ? 4 : 3 : 2);
+      break;
+    case 1:
+      hanIndex = MIN(hanIndex + 1, 15);
+      lv_label_set_text(ui_hancount, validHan[hanIndex]);
+      break;
+    case 2:
+      hanIndex = MAX(hanIndex -1, 0);
+      lv_label_set_text(ui_hancount, validHan[hanIndex]);
+
+      break;
+    case 3:
+      lv_obj_add_flag(getModalStepContent(1), LV_OBJ_FLAG_HIDDEN);
+      lv_obj_remove_flag(getModalStepContent(0), LV_OBJ_FLAG_HIDDEN);
+      modalContentStep--;
+
+      break;
+    default: 
+      break;
+  }
+}
+
+void handleModalStep3(int button ) {
+  bool skipDiscard = !!winType;
+  switch(button) {
+    case 0:
+      transitionToStep(skipDiscard ? 4 : 3);
+      break;
+    case 1:
+      // Ron
+      fuIndex = MIN(fuIndex + 1, 10);
+      lv_label_set_text(ui_fucount, validFu[fuIndex]);
+      break;
+    case 2:
+      // Tsumo
+      // Ron
+      fuIndex = MAX(fuIndex -1, 0);
+      lv_label_set_text(ui_fucount, validFu[fuIndex]);
+
+      break;
+    case 3:
+      lv_obj_add_flag(getModalStepContent(2), LV_OBJ_FLAG_HIDDEN);
+      lv_obj_remove_flag(getModalStepContent(1), LV_OBJ_FLAG_HIDDEN);
+      modalContentStep = 1;
+
+      break;
+    default: 
+      break;
+  }
+}
+
+void handleModalStep4(int button) {
+  int newIndex;
+  bool skipFu = hanIndex >= 4;
+
+  switch(button) {
+    case 0:
+      transitionToStep(4);
+      break;
+    case 1:
+      newIndex = (discarderIndex + 1) & 3;
+      newIndex += ((newIndex == rotationIndex) ? 1 : 0);
+      discarderIndex = newIndex & 3;
+      lv_label_set_text(ui_discarder, discarders[discarderIndex]);
+      break;
+    case 2:
+      newIndex = (4+ discarderIndex - 1) & 3;
+      newIndex += ((newIndex == rotationIndex) ? -1 : 0);
+      discarderIndex = (newIndex+ 4) & 3;
+      lv_label_set_text(ui_discarder, discarders[discarderIndex]);
+      break;
+    case 3:
+      transitionToStep(skipFu ? 1 : 2);
+      break;
+    default: 
+      break;
+  }
+}
+
+void applyPlayerOffsets() {
+  for (int i=0; i< 4; i++) {
+    scores[i] += scoreOffsets[i];
+    scoreOffsets[i] = 0;
+  }
+  repaintPlayers();
+}
+
+void handleModalStep5(int button) {
+  bool skipDiscard = !!winType;
+  bool skipFu = hanIndex >= 4;
+
+    switch(button) {
+    case 0:
+      transitionToStep(-1);
+      applyPlayerOffsets();
+      break;
+    case 1:
+      break;
+    case 2:
+      break;
+    case 3:
+      transitionToStep(skipDiscard ? skipFu ? 1 : 2 : 3);
+      clearPlayerOffsets();
+      break;
+    default: 
+      break;
+    }
+}
+
+lv_obj_t * getPlayerComponent(int i) {
+  switch (i) {
+    case 0:
+      return ui_player1;
+    case 1:
+      return ui_player2;
+    case 2:
+      return ui_player3;
+    case 3:
+      return ui_player4;
+    default:
+      return NULL;
+  }
+}
+
+void clearPlayerOffsets() {
+  applyTsumoOffsets(0,0,0);
+  repaintPlayers();
+}
+
+// assign offset scores, score are counter clockwise from winner
+void assignPlayerOffsets(int s1,int s2, int s3, int s4) {
+  scoreOffsets[0] = s1;
+  scoreOffsets[1] = s2;
+  scoreOffsets[2] = s3;
+  scoreOffsets[3] = s4;
+}
+
+// assign offset scores, score are counter clockwise from winner
+void repaintPlayers() {
+  lv_obj_t * cui_player;
+  lv_obj_t * cui_offset_score;
+  lv_obj_t * cui_score;
+
+  for (int i=0; i<4;i++){
+    cui_player = getPlayerComponent(i);
+    cui_offset_score = ui_comp_get_child(cui_player, UI_COMP_PLAYER_PANEL30_OFFSETSCORE);
+    cui_score = ui_comp_get_child(cui_player, UI_COMP_PLAYER_PANEL9_PANEL8_SCORE);
+
+    if (scoreOffsets[i]) {
+      char result[100]; 
+      // Concatenate safely
+      snprintf(result, sizeof(result), (scoreOffsets[i] > 0) ? "+%d": "%d", scoreOffsets[i]);      
+      lv_label_set_text(cui_offset_score, result);
+      lv_obj_remove_flag(cui_offset_score, LV_OBJ_FLAG_HIDDEN);
+      
+    } else {
+      lv_obj_add_flag(cui_offset_score, LV_OBJ_FLAG_HIDDEN);
+    }
+    char scoreResult[100]; 
+    snprintf(scoreResult, sizeof(scoreResult), "%d", scores[i]);      
+    lv_label_set_text(cui_score, scoreResult);
+  }
+}
+
+
+void handleButton(int button) {
+  int offsetButton = (button + 4 - rotationIndex) & 3;
+  Serial.printf("%d  %d", modalContentStep, offsetButton);
+  switch (modalContentStep) {
+    case -1:
+      break;
+    case 0: 
+      handleModalStep1(offsetButton);
+      break;
+    case 1: 
+      handleModalStep2(offsetButton);
+      break;
+    case 2: 
+      handleModalStep3(offsetButton);
+      break;
+    case 3: 
+      handleModalStep4(offsetButton);
+      break;
+    case 4: 
+      handleModalStep5(offsetButton);
+      break;
+    default:
+      Serial.println("can't handle");
+      break;
+  }
+
+
+}
+
+void resetModalLabels() {
+  modalContentStep = 0;
+  hanIndex = 0;
+  fuIndex = 2;
+  discarderIndex = 0;
+  lv_label_set_text(ui_fucount, validFu[fuIndex]);
+  lv_label_set_text(ui_hancount, validHan[hanIndex]);
+  lv_label_set_text(ui_discarder, discarders[(rotationIndex+1)&3]);
+  lv_label_set_text(ui_modalplayer, discarders[rotationIndex]);
+}
+void setModalVisibility(bool visible) {
+  if (visible) {
+    if (modalContentStep > 0){
+      lv_obj_add_flag(getModalStepContent(modalContentStep), LV_OBJ_FLAG_HIDDEN);
+      
+    }
+    resetModalLabels();
+    lv_obj_remove_flag(ui_modalcontainer, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_remove_flag(getModalStepContent(0), LV_OBJ_FLAG_HIDDEN);
+  } else {
+    lv_obj_add_flag(ui_modalcontainer, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(getModalStepContent(0), LV_OBJ_FLAG_HIDDEN);
+  }
+}
 
 void BOOT_LoopTask(void *arg) {
   for (;;) {
@@ -146,6 +578,28 @@ void KEY_LoopTask(void *arg) {
       is_Music = true;
       Serial.println("Press other button");
       xEventGroupSetBits(CodecGroups, 0x04);
+    } else if (even & 0x04) {
+      if (Lvgl_lock(-1)) {
+        lv_obj_t * current_screen = lv_screen_active();
+        lv_obj_t * next_screen = NULL;
+
+        // 1. Identify which screen is currently on the display
+        if (current_screen == ui_Screen1) {
+            next_screen = ui_Screen2;
+            showSensors = true;
+        } 
+        else if (current_screen == ui_Screen2) {
+            next_screen = ui_Screen1;
+            showSensors = false;
+        } 
+        // 2. Perform the safe transition if a target was found
+        if (next_screen != NULL) {
+          lv_screen_load_anim(next_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
+        }
+
+        Lvgl_unlock();
+      }
+
     }
   }
 }
@@ -155,6 +609,13 @@ void TL_LoopTask(void *arg) {
     EventBits_t even = xEventGroupWaitBits(TLButtonGroups, (0x01 | 0x02 | 0x04), pdTRUE, pdFALSE, pdMS_TO_TICKS(2000));
     if (even & 0x01) {
       Serial.println("TL Click");
+      if (Lvgl_lock(-1)) {
+
+        handleButton(2);
+      
+        Lvgl_unlock();
+      }
+
     } else if (even & 0x02) {
       Serial.println("TL DClick");
       if (Lvgl_lock(-1)) {
@@ -166,9 +627,8 @@ void TL_LoopTask(void *arg) {
       }
     } else if (even & 0x04) {
       if (Lvgl_lock(-1)) {
-        lv_obj_set_style_transform_rotation(ui_modalcontainer,1800, LV_PART_MAIN| LV_STATE_DEFAULT);
-        lv_obj_update_layout(ui_modalcontainer); 
-
+        setRotation(2);
+        setModalVisibility(true);
         Lvgl_unlock();
       }
     }
@@ -184,21 +644,7 @@ void TR_LoopTask(void *arg) {
           Serial.println("TR Click");
 
       if (Lvgl_lock(-1)) {
-        lv_obj_t * current_screen = lv_screen_active();
-        lv_obj_t * next_screen = NULL;
-
-        // 1. Identify which screen is currently on the display
-        if (current_screen == ui_Screen1) {
-            next_screen = ui_Screen2;
-        } 
-        else if (current_screen == ui_Screen2) {
-            next_screen = ui_Screen1;
-        } 
-        // 2. Perform the safe transition if a target was found
-        if (next_screen != NULL) {
-          lv_screen_load_anim(next_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
-        }
-
+        handleButton(1);
         Lvgl_unlock();
       }
     } else if (even & 0x02) {
@@ -206,31 +652,31 @@ void TR_LoopTask(void *arg) {
 
     } else if (even & 0x04) {
       if (Lvgl_lock(-1)) {
-        lv_obj_set_style_transform_rotation(ui_modalcontainer,2700, LV_PART_MAIN| LV_STATE_DEFAULT);
-            lv_obj_update_layout(ui_modalcontainer); 
-
+        setRotation(1);
+        setModalVisibility(true);
         Lvgl_unlock();
       }
     }
   }
 }
+
+
 void BR_LoopTask(void *arg) {
   for (;;) {
     EventBits_t even = xEventGroupWaitBits(BRButtonGroups, (0x01 | 0x02 | 0x04), pdTRUE, pdFALSE, pdMS_TO_TICKS(2000));
     if (even & 0x01) {
-      Serial.println("BR Click");
+    if (Lvgl_lock(-1)) {
+        handleButton(0);
+        Lvgl_unlock();
+      }    
     } else if (even & 0x02) {
       Serial.println("BR DClick");
     } else if (even & 0x04) {
       modalOpen = !modalOpen;
       if (Lvgl_lock(-1)) {
-        lv_obj_set_style_transform_rotation(ui_modalcontainer,0, LV_PART_MAIN| LV_STATE_DEFAULT);
+        setRotation(0);
+        setModalVisibility(true);
 
-        if (modalOpen) {
-          floatup_Animation(ui_modal,0);
-        } else {
-          floatdown_Animation(ui_modal, 0);
-        }
         Lvgl_unlock();
       }
     }
@@ -241,13 +687,15 @@ void BL_LoopTask(void *arg) {
   for (;;) {
     EventBits_t even = xEventGroupWaitBits(BLButtonGroups, (0x01 | 0x02 | 0x04), pdTRUE, pdFALSE, pdMS_TO_TICKS(2000));
     if (even & 0x01) {
-      Serial.println("BL Click");
-    } else if (even & 0x02) {
+    if (Lvgl_lock(-1)) {
+        handleButton(3);
+        Lvgl_unlock();
+      }    } else if (even & 0x02) {
       Serial.println("BL DClick");
     } else if (even & 0x04) {
       if (Lvgl_lock(-1)) {
-        lv_obj_set_style_transform_rotation(ui_modalcontainer,900, LV_PART_MAIN| LV_STATE_DEFAULT);
-            lv_obj_update_layout(ui_modalcontainer); 
+        setRotation(3);
+        setModalVisibility(true);
 
         Lvgl_unlock();
       }
@@ -357,7 +805,7 @@ static void bar1_update_cb(lv_timer_t * timer) {
         lv_obj_t * riichi_icon;
         switch(i) {
             case 0:
-                cui_player = ui_player4;
+                cui_player = ui_player2;
                 break;
             case 1:
                 cui_player = ui_player3;
@@ -366,7 +814,7 @@ static void bar1_update_cb(lv_timer_t * timer) {
                 cui_player = ui_player1;
                 break;
             case 3:
-                cui_player = ui_player2;
+                cui_player = ui_player4;
                 break;
             default:
                 cui_player = ui_player1;
@@ -386,9 +834,6 @@ static void bar1_update_cb(lv_timer_t * timer) {
     // Concatenate safely
     snprintf(result, sizeof(result), "%s%d", "x", riichi_count);
     lv_label_set_text(ui_Label5,result);
-
-
-
 }
 
 
@@ -417,12 +862,12 @@ void setupBarTimers() {
 void setupPlayers() {
   lv_label_set_text(ui_comp_get_child(ui_player1, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), "olivia");
   lv_label_set_text(ui_comp_get_child(ui_player1, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), "東");
-  lv_label_set_text(ui_comp_get_child(ui_player4, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), "stephen");
-  lv_label_set_text(ui_comp_get_child(ui_player4, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), "南");
+  lv_label_set_text(ui_comp_get_child(ui_player4, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), "porrith");
+  lv_label_set_text(ui_comp_get_child(ui_player2, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), "南");
   lv_label_set_text(ui_comp_get_child(ui_player3, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), "jay");
   lv_label_set_text(ui_comp_get_child(ui_player3, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), "西");
-  lv_label_set_text(ui_comp_get_child(ui_player2, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), "porrith");
-  lv_label_set_text(ui_comp_get_child(ui_player2, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), "北");
+  lv_label_set_text(ui_comp_get_child(ui_player2, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), "stephen");
+  lv_label_set_text(ui_comp_get_child(ui_player4, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), "北");
 }
 
 void setup()
@@ -444,6 +889,7 @@ void setup()
     ui_init();
     setupPlayers();
     setupBarTimers();
+    repaintPlayers();
     Lvgl_unlock();
 
    }

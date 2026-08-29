@@ -74,7 +74,7 @@ void Lvgl_PortInit(int width, int height, DispFlushCb flush_cb) {
 			lv_log_register_print_cb(my_log_cb);
     #endif
 
-	size_t buffer_size = 2 * width * height * BYTES_PER_PIXEL;
+		size_t buffer_size = width * height * BYTES_PER_PIXEL;
 		uint8_t *buffer_1 = NULL;
     uint8_t *buffer_2 = NULL;
    // Allocate inside fast Internal RAM for quick bit-masking if possible, 
