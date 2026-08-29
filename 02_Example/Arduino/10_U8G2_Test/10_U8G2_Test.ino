@@ -7,10 +7,16 @@
 #include "codec_bsp.h"
 #include "ST7305_U8g2.h"
 #include <esp_timer.h>
+
+
+
 #define U8G2_USE_LARGE_FONTS
 #define LCD_WIDTH 400
 #define LCD_HEIGHT 300
-
+#define EAST_WIND_STR "東"
+#define SOUTH_WIND_STR "南"
+#define WEST_WIND_STR "西"
+#define NORTH_WIND_STR "北"
 #define RLCD_SCK_PIN 11
 #define RLCD_MOSI_PIN 12
 #define RLCD_DC_PIN 5
@@ -21,6 +27,50 @@
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 #define MED_MODAL_CONTENT_HEIGHT 125
+
+static lv_subject_t br_name_subject;
+static char curr_br_name_text_buffer[128];
+static char prev_br_name_text_buffer[128];
+
+static lv_subject_t br_wind_subject;
+static char curr_br_wind_text_buffer[128];
+static char prev_br_wind_text_buffer[128];
+
+static lv_subject_t br_score_subject;
+
+static lv_subject_t tr_name_subject;
+static char curr_tr_name_text_buffer[128];
+static char prev_tr_name_text_buffer[128];
+
+static lv_subject_t tr_wind_subject;
+static char curr_tr_wind_text_buffer[128];
+static char prev_tr_wind_text_buffer[128];
+
+static lv_subject_t tr_score_subject;
+
+static lv_subject_t tl_name_subject;
+static char curr_tl_name_text_buffer[128];
+static char prev_tl_name_text_buffer[128];
+
+
+static lv_subject_t tl_wind_subject;
+static char curr_tl_wind_text_buffer[128];
+static char prev_tl_wind_text_buffer[128];
+
+static lv_subject_t tl_score_subject;
+
+static lv_subject_t bl_name_subject;
+static char curr_bl_name_text_buffer[128];
+static char prev_bl_name_text_buffer[128];
+
+
+static lv_subject_t bl_wind_subject;
+static char curr_bl_wind_text_buffer[128];
+static char prev_bl_wind_text_buffer[128];
+static lv_subject_t bl_score_subject;
+static lv_subject_t * subject_scores[] = {&br_score_subject, &tr_score_subject, &tl_score_subject, &bl_score_subject}; 
+
+
 static int rotationIndex = 0;
 static int modalContentStep = -1;
 static ST7305_U8g2 lcd(RLCD_SCK_PIN, RLCD_MOSI_PIN, RLCD_DC_PIN, RLCD_CS_PIN, RLCD_RST_PIN);
@@ -87,7 +137,6 @@ static void Lvgl_FlushCallback(lv_display_t *drv, const lv_area_t *area, uint8_t
 
 
 
-
 //s0-3
 int selectPins[] =
 {
@@ -99,7 +148,8 @@ int signalPin = 17;
 int n = sizeof(selectPins)/sizeof(selectPins[0]);
 
 // ESWN
-char* discarders[] = {"olivia", "stephen", "jay", "porrith"}; 
+char* discarders[] = {"olivia", "stephen", "jay", "porrith"};
+char* winds[] = {EAST_WIND_STR, SOUTH_WIND_STR, WEST_WIND_STR, NORTH_WIND_STR}; 
 char* validHan[] = {"1", "2", "3", "4", "5", "6", "7","8", "9", "10", "11", "12", "Y", "2XY", "3XY", "4XY"}; 
 int hanBase[] = {8, 16, 32, 64, 2000, 3000, 3000, 4000, 4000, 4000, 6000, 6000, 8000, 16000, 24000, 32000 };
 int fuMultiplier[] = {20,25,30,40,50,60,70,80,90,100,110, 1};
@@ -114,6 +164,45 @@ static int scoreOffsets[] = {0, 0, 0, 0};
 
 bool modalOpen = false;
 static int winType = -1;
+static int seatRotationNum = 0;
+static int repeatNum = 0;
+
+
+void setupObservers() {
+  lv_subject_init_string(&br_name_subject, curr_br_name_text_buffer, prev_br_name_text_buffer, sizeof(curr_br_name_text_buffer), discarders[0]);
+  lv_subject_init_string(&br_wind_subject, curr_br_wind_text_buffer, prev_br_wind_text_buffer, sizeof(curr_br_wind_text_buffer), winds[0]);
+  lv_subject_init_string(&tr_name_subject, curr_tr_name_text_buffer, prev_tr_name_text_buffer, sizeof(curr_tr_name_text_buffer), discarders[1]);
+  lv_subject_init_string(&tr_wind_subject, curr_tr_wind_text_buffer, prev_tr_wind_text_buffer, sizeof(curr_tr_wind_text_buffer), winds[1]);
+  lv_subject_init_string(&tl_name_subject, curr_tl_name_text_buffer, prev_tl_name_text_buffer, sizeof(curr_tl_name_text_buffer), discarders[2]);
+  lv_subject_init_string(&tl_wind_subject, curr_tl_wind_text_buffer, prev_tl_wind_text_buffer, sizeof(curr_tl_wind_text_buffer), winds[2]);
+  lv_subject_init_string(&bl_name_subject, curr_bl_name_text_buffer, prev_bl_name_text_buffer, sizeof(curr_bl_name_text_buffer), discarders[3]);
+  lv_subject_init_string(&bl_wind_subject, curr_bl_wind_text_buffer, prev_bl_wind_text_buffer, sizeof(curr_bl_wind_text_buffer), winds[3]);
+  //scores
+  lv_subject_init_int(&br_score_subject, 25000);
+  lv_subject_init_int(&tr_score_subject, 25000);
+  lv_subject_init_int(&tl_score_subject, 25000);
+  lv_subject_init_int(&bl_score_subject, 25000);
+
+  //cui_offset_score = ui_comp_get_child(cui_player, UI_COMP_PLAYER_PANEL30_OFFSETSCORE);
+
+
+  lv_label_bind_text(ui_comp_get_child(ui_player1, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), &br_name_subject, "%s");
+  lv_label_bind_text(ui_comp_get_child(ui_player1, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), &br_wind_subject, "%s");
+  lv_label_bind_text(ui_comp_get_child(ui_player1, UI_COMP_PLAYER_PANEL9_PANEL8_SCORE), &br_score_subject, "%d");
+
+  lv_label_bind_text(ui_comp_get_child(ui_player2, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME),&tr_name_subject, "%s");
+  lv_label_bind_text(ui_comp_get_child(ui_player2, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), &tr_wind_subject, "%s");
+  lv_label_bind_text(ui_comp_get_child(ui_player2, UI_COMP_PLAYER_PANEL9_PANEL8_SCORE), &tr_score_subject, "%d");
+
+  lv_label_bind_text(ui_comp_get_child(ui_player3, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), &tl_name_subject, "%s");
+  lv_label_bind_text(ui_comp_get_child(ui_player3, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), &tl_wind_subject, "%s");
+  lv_label_bind_text(ui_comp_get_child(ui_player3, UI_COMP_PLAYER_PANEL9_PANEL8_SCORE), &tl_score_subject, "%d");
+
+  lv_label_bind_text(ui_comp_get_child(ui_player4, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), &bl_name_subject, "%s");
+  lv_label_bind_text(ui_comp_get_child(ui_player4, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), &bl_wind_subject, "%s");
+  lv_label_bind_text(ui_comp_get_child(ui_player4, UI_COMP_PLAYER_PANEL9_PANEL8_SCORE), &bl_score_subject, "%d");
+}
+
 
 void resetModalStepHistory() {
   size_t length = sizeof(modalStepVisited) / sizeof(modalStepVisited[0]);
@@ -389,7 +478,7 @@ void handleModalStep4(int button) {
 
 void applyPlayerOffsets() {
   for (int i=0; i< 4; i++) {
-    scores[i] += scoreOffsets[i];
+    lv_subject_set_int(subject_scores[i], lv_subject_get_int(subject_scores[i]) + scoreOffsets[i]);
     scoreOffsets[i] = 0;
   }
   repaintPlayers();
@@ -438,37 +527,23 @@ void clearPlayerOffsets() {
 }
 
 // assign offset scores, score are counter clockwise from winner
-void assignPlayerOffsets(int s1,int s2, int s3, int s4) {
-  scoreOffsets[0] = s1;
-  scoreOffsets[1] = s2;
-  scoreOffsets[2] = s3;
-  scoreOffsets[3] = s4;
-}
-
-// assign offset scores, score are counter clockwise from winner
 void repaintPlayers() {
   lv_obj_t * cui_player;
   lv_obj_t * cui_offset_score;
-  lv_obj_t * cui_score;
 
   for (int i=0; i<4;i++){
     cui_player = getPlayerComponent(i);
     cui_offset_score = ui_comp_get_child(cui_player, UI_COMP_PLAYER_PANEL30_OFFSETSCORE);
-    cui_score = ui_comp_get_child(cui_player, UI_COMP_PLAYER_PANEL9_PANEL8_SCORE);
 
     if (scoreOffsets[i]) {
       char result[100]; 
       // Concatenate safely
-      snprintf(result, sizeof(result), (scoreOffsets[i] > 0) ? "+%d": "%d", scoreOffsets[i]);      
+      snprintf(result, sizeof(result), "%+d", scoreOffsets[i]);      
       lv_label_set_text(cui_offset_score, result);
       lv_obj_remove_flag(cui_offset_score, LV_OBJ_FLAG_HIDDEN);
-      
     } else {
       lv_obj_add_flag(cui_offset_score, LV_OBJ_FLAG_HIDDEN);
     }
-    char scoreResult[100]; 
-    snprintf(scoreResult, sizeof(scoreResult), "%d", scores[i]);      
-    lv_label_set_text(cui_score, scoreResult);
   }
 }
 
@@ -838,18 +913,6 @@ static void bar1_update_cb(lv_timer_t * timer) {
 
 
 
-const char* const utf8Labels[] = {
-  "東 1", 
-  "東 2",   
-  "東 3",   
-  "東 4", 
-  "南 1", 
-  "南 2",   
-  "南 3",   
-  "南 4"
-};
-
-const int labelCount = sizeof(utf8Labels) / sizeof(utf8Labels[0]);
 unsigned long previousMillis = 0; 
 const unsigned long interval = 2000; // Interval in milliseconds (1 second)
 
@@ -888,6 +951,7 @@ void setup()
    if (Lvgl_lock(-1)) {
     ui_init();
     setupPlayers();
+    setupObservers();
     setupBarTimers();
     repaintPlayers();
     Lvgl_unlock();
