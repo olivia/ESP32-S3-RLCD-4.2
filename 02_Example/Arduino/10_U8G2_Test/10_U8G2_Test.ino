@@ -237,6 +237,7 @@ void resetModalStepHistory() {
   for (int i = 0; i< length; i++) {
     modalStepVisited[i] = false;
   }
+  modalContentStep = -1;
 }
 
 
@@ -359,7 +360,7 @@ void transitionToStep(int nextStep) {
     lv_obj_add_flag(prevStepUI, LV_OBJ_FLAG_HIDDEN);
   }
   if (!nextStepUI) {
-    lv_obj_add_flag(ui_modalcontainer, LV_OBJ_FLAG_HIDDEN);
+    setModalVisibility(false);
     resetModalStepHistory();
   } else {
     lv_obj_remove_flag(nextStepUI, LV_OBJ_FLAG_HIDDEN);
@@ -410,9 +411,7 @@ void handleModalStep1(int button) {
       transitionToStep(1);
       break;
     case 3:
-      lv_obj_add_flag(getModalStepContent(0), LV_OBJ_FLAG_HIDDEN);
-      lv_obj_add_flag(ui_modalcontainer, LV_OBJ_FLAG_HIDDEN);
-      modalContentStep--;
+      transitionToStep(-1);
       break;
     default: 
       break;
@@ -619,11 +618,14 @@ void setModalVisibility(bool visible) {
       
     }
     resetModalLabels();
+    lv_obj_add_flag(ui_roundpane, LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_flag(ui_modalcontainer, LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_flag(getModalStepContent(0), LV_OBJ_FLAG_HIDDEN);
   } else {
     lv_obj_add_flag(ui_modalcontainer, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(getModalStepContent(0), LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(getModalStepContent(modalContentStep), LV_OBJ_FLAG_HIDDEN);
+    lv_obj_remove_flag(ui_roundpane, LV_OBJ_FLAG_HIDDEN);
+    modalContentStep = -1;
   }
 }
 
@@ -665,36 +667,44 @@ void Codec_LoopTask(void *arg) {
     }
   }
 }
+void screen1TimeoutTask() {
+  // sensor id -> user
+  int sensorMap[] = {1,2,0,3};
+  int riichi_count = 0; 
+  for (int i=0; i<4;i++) {
+      lv_obj_t * riichi_icon;
+      riichi_icon = ui_comp_get_child(getPlayerComponent(sensorMap[i]), UI_COMP_PLAYER_PANEL9_RIICHI);
+      if (!lv_obj_has_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN) && currentStateArr[i] != STATE_STABLE_COVERED ) {
+        lv_obj_add_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN);
 
+      } else if (lv_obj_has_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN)&& currentStateArr[i] == STATE_STABLE_COVERED ) {
+        lv_obj_remove_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN);
+      }
+    riichi_count += (currentStateArr[i] == STATE_STABLE_COVERED) ? 1 : 0;
+  }
+  // "Player" (6) + Number (1) + Null terminator (1) = 8 bytes needed
+  char result[3]; 
+  // Concatenate safely
+  snprintf(result, sizeof(result), "%s%d", "x", riichi_count);
+  lv_label_set_text(ui_Label5,result);
+
+}
+void screen2TimeoutTask() {
+  lv_bar_set_value(ui_Bar1, lightState[0], LV_ANIM_ON); 
+  lv_bar_set_value(ui_Bar2, lightState[1], LV_ANIM_ON); 
+  lv_bar_set_value(ui_Bar3, lightState[2], LV_ANIM_ON); 
+  lv_bar_set_value(ui_Bar4, lightState[3], LV_ANIM_ON);
+}
 void handleScreenTimeoutTask() {
   lv_obj_t * current_screen = lv_screen_active();
   lv_obj_t * next_screen = NULL;
 
   // 1. Identify which screen is currently on the display
   if (current_screen == ui_Screen1) {
-    int riichi_count = 0; 
-    for (int i=0; i<4;i++) {
-        lv_obj_t * riichi_icon;
-        riichi_icon = ui_comp_get_child(getPlayerComponent(i), UI_COMP_PLAYER_PANEL9_RIICHI);
-        if (!lv_obj_has_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN) && currentStateArr[i] != STATE_STABLE_COVERED ) {
-          lv_obj_add_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN);
-
-        } else if (lv_obj_has_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN)&& currentStateArr[i] == STATE_STABLE_COVERED ) {
-          lv_obj_remove_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN);
-        }
-      riichi_count += (currentStateArr[i] == STATE_STABLE_COVERED) ? 1 : 0;
-    }
-    // "Player" (6) + Number (1) + Null terminator (1) = 8 bytes needed
-    char result[3]; 
-    // Concatenate safely
-    snprintf(result, sizeof(result), "%s%d", "x", riichi_count);
-    lv_label_set_text(ui_Label5,result);
+    screen1TimeoutTask();
   } 
   else if (current_screen == ui_Screen2) {
-    lv_bar_set_value(ui_Bar1, lightState[0], LV_ANIM_ON); 
-    lv_bar_set_value(ui_Bar2, lightState[1], LV_ANIM_ON); 
-    lv_bar_set_value(ui_Bar3, lightState[2], LV_ANIM_ON); 
-    lv_bar_set_value(ui_Bar4, lightState[3], LV_ANIM_ON);
+    screen2TimeoutTask();
   } 
 
 
@@ -839,10 +849,8 @@ void processLightSensor(int rawValue, int sensor_id) {
     long currTime = millis();
     SensorState_t prevState = currentStateArr[sensor_id];
     SensorState_t currState = (rawValue > 1000) ? STATE_STABLE_DARK : currentStateArr[sensor_id];
-    bool stateChange = false;
     if (prevState == STATE_STABLE_COVERED && currState == STATE_STABLE_DARK) {
       currentStateArr[sensor_id] = currState;
-      stateChange = true;
     }
     else if (prevState != STATE_STABLE_COVERED && rawValue < 250 && (lastTriggered[sensor_id] + 5000 * 1) < currTime) {
         is_Music = true;
@@ -851,9 +859,10 @@ void processLightSensor(int rawValue, int sensor_id) {
         currentStateArr[sensor_id] = currState;
         lastTriggered[sensor_id] = currTime;
         xEventGroupSetBits(CodecGroups, 1 << sensor_id);
-        stateChange = true;
-
-
+    }
+    else if (prevState != STATE_STABLE_COVERED && rawValue < 250) {
+        currState = STATE_STABLE_COVERED;
+        currentStateArr[sensor_id] = currState;
     }
     previousStateArr[sensor_id] = currState;
     
@@ -878,21 +887,22 @@ void SENSOR_LoopTask(void *arg) {
       vTaskDelay(xSettleDelay);
       switchState[i-12] = analogRead(signalPin)>2048;
     }
-    for(int i=8; i<12; i++)
-    {
-      int s0 = (i>>0)&1;
-      int s1 = (i>>1)&1;
-      int s2 = (i>>2)&1;
-      int s3 = (i>>3)&1;
-      digitalWrite(selectPins[0], s0);
-      digitalWrite(selectPins[1], s1);
-      digitalWrite(selectPins[2], s2);
-      digitalWrite(selectPins[3], s3);
-      vTaskDelay(xSettleDelay);
-      int rawVal = analogRead(signalPin);
-      lightState[i-8] = floor(180.0*rawVal/4095.0);
-      
-      processLightSensor(rawVal, i-8);
+    if (modalContentStep == -1) {
+      for(int i=8; i<12; i++)
+      {
+        int s0 = (i>>0)&1;
+        int s1 = (i>>1)&1;
+        int s2 = (i>>2)&1;
+        int s3 = (i>>3)&1;
+        digitalWrite(selectPins[0], s0);
+        digitalWrite(selectPins[1], s1);
+        digitalWrite(selectPins[2], s2);
+        digitalWrite(selectPins[3], s3);
+        vTaskDelay(xSettleDelay);
+        int rawVal = analogRead(signalPin);
+        lightState[i-8] = floor(180.0*rawVal/4095.0);
+        processLightSensor(rawVal, i-8);
+      }
     }
   }
 }
@@ -908,21 +918,9 @@ const unsigned long interval = 2000; // Interval in milliseconds (1 second)
 
 
 
-void setupBarTimers() {
- lv_timer_create(bar1_update_cb, 80, ui_Bar1);
+void setupTimers() {
+ lv_timer_create(bar1_update_cb, 100, NULL);
 }
-
-void setupPlayers() {
-  lv_label_set_text(ui_comp_get_child(ui_player1, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), "olivia");
-  lv_label_set_text(ui_comp_get_child(ui_player1, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), "東");
-  lv_label_set_text(ui_comp_get_child(ui_player4, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), "porrith");
-  lv_label_set_text(ui_comp_get_child(ui_player2, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), "南");
-  lv_label_set_text(ui_comp_get_child(ui_player3, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), "jay");
-  lv_label_set_text(ui_comp_get_child(ui_player3, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), "西");
-  lv_label_set_text(ui_comp_get_child(ui_player2, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), "stephen");
-  lv_label_set_text(ui_comp_get_child(ui_player4, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), "北");
-}
-
 void setup()
 {
   audio_ptr = (uint8_t *)heap_caps_malloc(288 * 1000 * sizeof(uint8_t), MALLOC_CAP_SPIRAM);
@@ -940,9 +938,8 @@ void setup()
 
    if (Lvgl_lock(-1)) {
     ui_init();
-    setupPlayers();
     setupObservers();
-    setupBarTimers();
+    setupTimers();
     repaintPlayers();
     Lvgl_unlock();
 
