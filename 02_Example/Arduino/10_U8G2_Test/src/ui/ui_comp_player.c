@@ -49,6 +49,7 @@ lv_obj_set_width( cui_offsetscore, LV_SIZE_CONTENT);  /// 1
 lv_obj_set_height( cui_offsetscore, LV_SIZE_CONTENT);   /// 1
 lv_obj_set_align( cui_offsetscore, LV_ALIGN_LEFT_MID );
 lv_label_set_text(cui_offsetscore,"-3000");
+lv_obj_add_flag( cui_offsetscore, LV_OBJ_FLAG_HIDDEN );   /// Flags
 lv_obj_set_style_text_font(cui_offsetscore, &lv_font_montserrat_20, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_pad_left(cui_offsetscore, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_pad_right(cui_offsetscore, 0, LV_PART_MAIN| LV_STATE_DEFAULT);

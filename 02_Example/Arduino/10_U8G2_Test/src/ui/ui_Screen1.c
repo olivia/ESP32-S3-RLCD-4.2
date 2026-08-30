@@ -6,7 +6,7 @@
 #include "ui.h"
 
 lv_obj_t *uic_modalplayer;
-lv_obj_t *ui_Screen1 = NULL;lv_obj_t *ui_player1 = NULL;lv_obj_t *ui_player2 = NULL;lv_obj_t *ui_player3 = NULL;lv_obj_t *ui_player4 = NULL;lv_obj_t *ui_roundpane = NULL;lv_obj_t *ui_Panel7 = NULL;lv_obj_t *ui_roundwind = NULL;lv_obj_t *ui_roundnum = NULL;lv_obj_t *ui_Panel6 = NULL;lv_obj_t *ui_riichi2 = NULL;lv_obj_t *ui_dot2 = NULL;lv_obj_t *ui_Label5 = NULL;lv_obj_t *ui_riichi1 = NULL;lv_obj_t *ui_dot1 = NULL;lv_obj_t *ui_dot3 = NULL;lv_obj_t *ui_dot4 = NULL;lv_obj_t *ui_dot5 = NULL;lv_obj_t *ui_dot6 = NULL;lv_obj_t *ui_dot7 = NULL;lv_obj_t *ui_dot8 = NULL;lv_obj_t *ui_dot9 = NULL;lv_obj_t *ui_Label3 = NULL;lv_obj_t *ui_modalcontainer = NULL;lv_obj_t *ui_modal = NULL;lv_obj_t *ui_modalcontent = NULL;lv_obj_t *ui_win1 = NULL;lv_obj_t *ui_Panel14 = NULL;lv_obj_t *ui_Panel15 = NULL;lv_obj_t *ui_Button4 = NULL;lv_obj_t *ui_Label14 = NULL;lv_obj_t *ui_blicon4 = NULL;lv_obj_t *ui_blimg4 = NULL;lv_obj_t *ui_Panel16 = NULL;lv_obj_t *ui_Button6 = NULL;lv_obj_t *ui_Label16 = NULL;lv_obj_t *ui_blicon5 = NULL;lv_obj_t *ui_blimg5 = NULL;lv_obj_t *ui_Panel3 = NULL;lv_obj_t *ui_cancel = NULL;lv_obj_t *ui_bricon1 = NULL;lv_obj_t *ui_Image1 = NULL;lv_obj_t *ui_Label6 = NULL;lv_obj_t *ui_draw = NULL;lv_obj_t *ui_Label7 = NULL;lv_obj_t *ui_bricon4 = NULL;lv_obj_t *ui_Image5 = NULL;lv_obj_t *ui_win2 = NULL;lv_obj_t *ui_Panel10 = NULL;lv_obj_t *ui_Panel13 = NULL;lv_obj_t *ui_Panel11 = NULL;lv_obj_t *ui_Button3 = NULL;lv_obj_t *ui_Label8 = NULL;lv_obj_t *ui_blicon2 = NULL;lv_obj_t *ui_blimg2 = NULL;lv_obj_t *ui_hancount = NULL;lv_obj_t *ui_Panel12 = NULL;lv_obj_t *ui_Button5 = NULL;lv_obj_t *ui_Label13 = NULL;lv_obj_t *ui_blicon3 = NULL;lv_obj_t *ui_blimg3 = NULL;lv_obj_t *ui_Label9 = NULL;lv_obj_t *ui_Panel4 = NULL;lv_obj_t *ui_prev = NULL;lv_obj_t *ui_bricon3 = NULL;lv_obj_t *ui_Image4 = NULL;lv_obj_t *ui_Label10 = NULL;lv_obj_t *ui_draw1 = NULL;lv_obj_t *ui_Label11 = NULL;lv_obj_t *ui_bricon5 = NULL;lv_obj_t *ui_Image6 = NULL;lv_obj_t *ui_win3 = NULL;lv_obj_t *ui_Panel17 = NULL;lv_obj_t *ui_Panel18 = NULL;lv_obj_t *ui_Panel19 = NULL;lv_obj_t *ui_Button7 = NULL;lv_obj_t *ui_Label15 = NULL;lv_obj_t *ui_blicon6 = NULL;lv_obj_t *ui_blimg6 = NULL;lv_obj_t *ui_fucount = NULL;lv_obj_t *ui_Panel20 = NULL;lv_obj_t *ui_Button8 = NULL;lv_obj_t *ui_Label18 = NULL;lv_obj_t *ui_blicon7 = NULL;lv_obj_t *ui_blimg7 = NULL;lv_obj_t *ui_Label19 = NULL;lv_obj_t *ui_Panel21 = NULL;lv_obj_t *ui_prev1 = NULL;lv_obj_t *ui_bricon2 = NULL;lv_obj_t *ui_Image2 = NULL;lv_obj_t *ui_Label20 = NULL;lv_obj_t *ui_draw2 = NULL;lv_obj_t *ui_Label21 = NULL;lv_obj_t *ui_bricon6 = NULL;lv_obj_t *ui_Image7 = NULL;lv_obj_t *ui_win4 = NULL;lv_obj_t *ui_Panel22 = NULL;lv_obj_t *ui_Panel23 = NULL;lv_obj_t *ui_Panel24 = NULL;lv_obj_t *ui_Button1 = NULL;lv_obj_t *ui_Image10 = NULL;lv_obj_t *ui_blicon1 = NULL;lv_obj_t *ui_blimg1 = NULL;lv_obj_t *ui_discarder = NULL;lv_obj_t *ui_Panel25 = NULL;lv_obj_t *ui_Button2 = NULL;lv_obj_t *ui_Image9 = NULL;lv_obj_t *ui_blicon8 = NULL;lv_obj_t *ui_blimg8 = NULL;lv_obj_t *ui_Label23 = NULL;lv_obj_t *ui_Panel26 = NULL;lv_obj_t *ui_prev2 = NULL;lv_obj_t *ui_bricon7 = NULL;lv_obj_t *ui_Image3 = NULL;lv_obj_t *ui_Label24 = NULL;lv_obj_t *ui_draw3 = NULL;lv_obj_t *ui_Label25 = NULL;lv_obj_t *ui_bricon8 = NULL;lv_obj_t *ui_Image8 = NULL;lv_obj_t *ui_win5 = NULL;lv_obj_t *ui_Panel27 = NULL;lv_obj_t *ui_Panel28 = NULL;lv_obj_t *ui_handetails = NULL;lv_obj_t *ui_Label28 = NULL;lv_obj_t *ui_fucontainerdetail = NULL;lv_obj_t *ui_funumdetail = NULL;lv_obj_t *ui_Label30 = NULL;lv_obj_t *ui_playerscoredetail = NULL;lv_obj_t *ui_payerdetail = NULL;lv_obj_t *ui_payernamedetail = NULL;lv_obj_t *ui_Image12 = NULL;lv_obj_t *ui_payerscoredetail = NULL;lv_obj_t *ui_auxpayerdetail = NULL;lv_obj_t *ui_auxpayernamedetail = NULL;lv_obj_t *ui_Image15 = NULL;lv_obj_t *ui_auxpayerscoredetail = NULL;lv_obj_t *ui_Panel31 = NULL;lv_obj_t *ui_prev3 = NULL;lv_obj_t *ui_bricon9 = NULL;lv_obj_t *ui_Image13 = NULL;lv_obj_t *ui_Label26 = NULL;lv_obj_t *ui_draw4 = NULL;lv_obj_t *ui_Label27 = NULL;lv_obj_t *ui_bricon10 = NULL;lv_obj_t *ui_Image14 = NULL;lv_obj_t *ui_Panel5 = NULL;lv_obj_t *ui_modalplayer = NULL;
+lv_obj_t *ui_Screen1 = NULL;lv_obj_t *ui_player1 = NULL;lv_obj_t *ui_player2 = NULL;lv_obj_t *ui_player3 = NULL;lv_obj_t *ui_player4 = NULL;lv_obj_t *ui_roundpane = NULL;lv_obj_t *ui_Panel7 = NULL;lv_obj_t *ui_roundwind = NULL;lv_obj_t *ui_roundnum = NULL;lv_obj_t *ui_Panel6 = NULL;lv_obj_t *ui_riichi2 = NULL;lv_obj_t *ui_dot2 = NULL;lv_obj_t *ui_doracount = NULL;lv_obj_t *ui_riichi1 = NULL;lv_obj_t *ui_dot1 = NULL;lv_obj_t *ui_dot3 = NULL;lv_obj_t *ui_dot4 = NULL;lv_obj_t *ui_dot5 = NULL;lv_obj_t *ui_dot6 = NULL;lv_obj_t *ui_dot7 = NULL;lv_obj_t *ui_dot8 = NULL;lv_obj_t *ui_dot9 = NULL;lv_obj_t *ui_honbacount = NULL;lv_obj_t *ui_modalcontainer = NULL;lv_obj_t *ui_modal = NULL;lv_obj_t *ui_modalcontent = NULL;lv_obj_t *ui_win1 = NULL;lv_obj_t *ui_Panel14 = NULL;lv_obj_t *ui_Panel15 = NULL;lv_obj_t *ui_Button4 = NULL;lv_obj_t *ui_Label14 = NULL;lv_obj_t *ui_blicon4 = NULL;lv_obj_t *ui_blimg4 = NULL;lv_obj_t *ui_Panel16 = NULL;lv_obj_t *ui_Button6 = NULL;lv_obj_t *ui_Label16 = NULL;lv_obj_t *ui_blicon5 = NULL;lv_obj_t *ui_blimg5 = NULL;lv_obj_t *ui_Panel3 = NULL;lv_obj_t *ui_cancel = NULL;lv_obj_t *ui_bricon1 = NULL;lv_obj_t *ui_Image1 = NULL;lv_obj_t *ui_Label6 = NULL;lv_obj_t *ui_draw = NULL;lv_obj_t *ui_Label7 = NULL;lv_obj_t *ui_bricon4 = NULL;lv_obj_t *ui_Image5 = NULL;lv_obj_t *ui_win2 = NULL;lv_obj_t *ui_Panel10 = NULL;lv_obj_t *ui_Panel13 = NULL;lv_obj_t *ui_Panel11 = NULL;lv_obj_t *ui_Button3 = NULL;lv_obj_t *ui_Label8 = NULL;lv_obj_t *ui_blicon2 = NULL;lv_obj_t *ui_blimg2 = NULL;lv_obj_t *ui_hancount = NULL;lv_obj_t *ui_Panel12 = NULL;lv_obj_t *ui_Button5 = NULL;lv_obj_t *ui_Label13 = NULL;lv_obj_t *ui_blicon3 = NULL;lv_obj_t *ui_blimg3 = NULL;lv_obj_t *ui_Label9 = NULL;lv_obj_t *ui_Panel4 = NULL;lv_obj_t *ui_prev = NULL;lv_obj_t *ui_bricon3 = NULL;lv_obj_t *ui_Image4 = NULL;lv_obj_t *ui_Label10 = NULL;lv_obj_t *ui_draw1 = NULL;lv_obj_t *ui_Label11 = NULL;lv_obj_t *ui_bricon5 = NULL;lv_obj_t *ui_Image6 = NULL;lv_obj_t *ui_win3 = NULL;lv_obj_t *ui_Panel17 = NULL;lv_obj_t *ui_Panel18 = NULL;lv_obj_t *ui_Panel19 = NULL;lv_obj_t *ui_Button7 = NULL;lv_obj_t *ui_Label15 = NULL;lv_obj_t *ui_blicon6 = NULL;lv_obj_t *ui_blimg6 = NULL;lv_obj_t *ui_fucount = NULL;lv_obj_t *ui_Panel20 = NULL;lv_obj_t *ui_Button8 = NULL;lv_obj_t *ui_Label18 = NULL;lv_obj_t *ui_blicon7 = NULL;lv_obj_t *ui_blimg7 = NULL;lv_obj_t *ui_Label19 = NULL;lv_obj_t *ui_Panel21 = NULL;lv_obj_t *ui_prev1 = NULL;lv_obj_t *ui_bricon2 = NULL;lv_obj_t *ui_Image2 = NULL;lv_obj_t *ui_Label20 = NULL;lv_obj_t *ui_draw2 = NULL;lv_obj_t *ui_Label21 = NULL;lv_obj_t *ui_bricon6 = NULL;lv_obj_t *ui_Image7 = NULL;lv_obj_t *ui_win4 = NULL;lv_obj_t *ui_Panel22 = NULL;lv_obj_t *ui_Panel23 = NULL;lv_obj_t *ui_Panel24 = NULL;lv_obj_t *ui_Button1 = NULL;lv_obj_t *ui_Image10 = NULL;lv_obj_t *ui_blicon1 = NULL;lv_obj_t *ui_blimg1 = NULL;lv_obj_t *ui_discarder = NULL;lv_obj_t *ui_Panel25 = NULL;lv_obj_t *ui_Button2 = NULL;lv_obj_t *ui_Image9 = NULL;lv_obj_t *ui_blicon8 = NULL;lv_obj_t *ui_blimg8 = NULL;lv_obj_t *ui_Label23 = NULL;lv_obj_t *ui_Panel26 = NULL;lv_obj_t *ui_prev2 = NULL;lv_obj_t *ui_bricon7 = NULL;lv_obj_t *ui_Image3 = NULL;lv_obj_t *ui_Label24 = NULL;lv_obj_t *ui_draw3 = NULL;lv_obj_t *ui_Label25 = NULL;lv_obj_t *ui_bricon8 = NULL;lv_obj_t *ui_Image8 = NULL;lv_obj_t *ui_win5 = NULL;lv_obj_t *ui_Panel27 = NULL;lv_obj_t *ui_Panel28 = NULL;lv_obj_t *ui_handetails = NULL;lv_obj_t *ui_Label28 = NULL;lv_obj_t *ui_fucontainerdetail = NULL;lv_obj_t *ui_funumdetail = NULL;lv_obj_t *ui_Label30 = NULL;lv_obj_t *ui_playerscoredetail = NULL;lv_obj_t *ui_payerdetail = NULL;lv_obj_t *ui_payernamedetail = NULL;lv_obj_t *ui_Image12 = NULL;lv_obj_t *ui_payerscoredetail = NULL;lv_obj_t *ui_auxpayerdetail = NULL;lv_obj_t *ui_auxpayernamedetail = NULL;lv_obj_t *ui_Image15 = NULL;lv_obj_t *ui_auxpayerscoredetail = NULL;lv_obj_t *ui_Panel31 = NULL;lv_obj_t *ui_prev3 = NULL;lv_obj_t *ui_bricon9 = NULL;lv_obj_t *ui_Image13 = NULL;lv_obj_t *ui_Label26 = NULL;lv_obj_t *ui_draw4 = NULL;lv_obj_t *ui_Label27 = NULL;lv_obj_t *ui_bricon10 = NULL;lv_obj_t *ui_Image14 = NULL;lv_obj_t *ui_Panel5 = NULL;lv_obj_t *ui_modalplayer = NULL;
 // event funtions
 void ui_event_Screen1( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
@@ -30,6 +30,7 @@ void ui_Screen1_screen_init(void)
 {
 ui_Screen1 = lv_obj_create(NULL);
 lv_obj_remove_flag( ui_Screen1, LV_OBJ_FLAG_SCROLLABLE );    /// Flags
+lv_obj_set_style_border_width(ui_Screen1, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_player1 = ui_player_create(ui_Screen1);
 lv_obj_set_x( ui_player1, 16 );
@@ -56,8 +57,8 @@ lv_obj_remove_flag( ui_player4, LV_OBJ_FLAG_HIDDEN );    /// Flags
 lv_obj_set_style_transform_rotation(ui_player4, 900, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_roundpane = lv_obj_create(ui_Screen1);
-lv_obj_set_width( ui_roundpane, LV_SIZE_CONTENT);  /// 100
-lv_obj_set_height( ui_roundpane, LV_SIZE_CONTENT);   /// 50
+lv_obj_set_width( ui_roundpane, 110);
+lv_obj_set_height( ui_roundpane, 110);
 lv_obj_set_align( ui_roundpane, LV_ALIGN_CENTER );
 lv_obj_set_flex_flow(ui_roundpane,LV_FLEX_FLOW_COLUMN);
 lv_obj_set_flex_align(ui_roundpane, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
@@ -69,6 +70,8 @@ lv_obj_set_style_pad_left(ui_roundpane, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_pad_right(ui_roundpane, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_pad_top(ui_roundpane, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_pad_bottom(ui_roundpane, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_transform_pivot_x(ui_roundpane, 55, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_transform_pivot_y(ui_roundpane, 55, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_Panel7 = lv_obj_create(ui_roundpane);
 lv_obj_set_width( ui_Panel7, LV_SIZE_CONTENT);  /// 100
@@ -142,12 +145,12 @@ ui_object_set_themeable_style_property(ui_dot2, LV_PART_MAIN| LV_STATE_DEFAULT, 
 ui_object_set_themeable_style_property(ui_dot2, LV_PART_MAIN| LV_STATE_DEFAULT, LV_STYLE_BG_OPA, _ui_theme_alpha_White);
 lv_obj_set_style_border_width(ui_dot2, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
 
-ui_Label5 = lv_label_create(ui_Panel6);
-lv_obj_set_width( ui_Label5, LV_SIZE_CONTENT);  /// 1
-lv_obj_set_height( ui_Label5, LV_SIZE_CONTENT);   /// 1
-lv_obj_set_align( ui_Label5, LV_ALIGN_CENTER );
-lv_label_set_text(ui_Label5,"x3");
-lv_obj_set_style_text_font(ui_Label5, &lv_font_montserrat_18, LV_PART_MAIN| LV_STATE_DEFAULT);
+ui_doracount = lv_label_create(ui_Panel6);
+lv_obj_set_width( ui_doracount, LV_SIZE_CONTENT);  /// 1
+lv_obj_set_height( ui_doracount, LV_SIZE_CONTENT);   /// 1
+lv_obj_set_align( ui_doracount, LV_ALIGN_CENTER );
+lv_label_set_text(ui_doracount,"0");
+lv_obj_set_style_text_font(ui_doracount, &lv_font_montserrat_18, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_riichi1 = lv_obj_create(ui_Panel6);
 lv_obj_set_width( ui_riichi1, 23);
@@ -245,24 +248,28 @@ ui_object_set_themeable_style_property(ui_dot9, LV_PART_MAIN| LV_STATE_DEFAULT, 
 ui_object_set_themeable_style_property(ui_dot9, LV_PART_MAIN| LV_STATE_DEFAULT, LV_STYLE_BG_OPA, _ui_theme_alpha_White);
 lv_obj_set_style_border_width(ui_dot9, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
 
-ui_Label3 = lv_label_create(ui_Panel6);
-lv_obj_set_width( ui_Label3, LV_SIZE_CONTENT);  /// 1
-lv_obj_set_height( ui_Label3, LV_SIZE_CONTENT);   /// 1
-lv_obj_set_align( ui_Label3, LV_ALIGN_CENTER );
-lv_label_set_text(ui_Label3,"x3");
-lv_obj_set_style_text_font(ui_Label3, &lv_font_montserrat_18, LV_PART_MAIN| LV_STATE_DEFAULT);
+ui_honbacount = lv_label_create(ui_Panel6);
+lv_obj_set_width( ui_honbacount, LV_SIZE_CONTENT);  /// 1
+lv_obj_set_height( ui_honbacount, LV_SIZE_CONTENT);   /// 1
+lv_obj_set_align( ui_honbacount, LV_ALIGN_CENTER );
+lv_label_set_text(ui_honbacount,"0");
+lv_obj_set_style_text_font(ui_honbacount, &lv_font_montserrat_18, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_modalcontainer = lv_obj_create(ui_Screen1);
-lv_obj_set_width( ui_modalcontainer, 200);
-lv_obj_set_height( ui_modalcontainer, 200);
+lv_obj_set_width( ui_modalcontainer, 194);
+lv_obj_set_height( ui_modalcontainer, 160);
 lv_obj_set_align( ui_modalcontainer, LV_ALIGN_CENTER );
 lv_obj_add_flag( ui_modalcontainer, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_IGNORE_LAYOUT );   /// Flags
 lv_obj_remove_flag( ui_modalcontainer, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_PRESS_LOCK | LV_OBJ_FLAG_CLICK_FOCUSABLE | LV_OBJ_FLAG_GESTURE_BUBBLE | LV_OBJ_FLAG_SNAPPABLE | LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_SCROLL_ELASTIC | LV_OBJ_FLAG_SCROLL_MOMENTUM | LV_OBJ_FLAG_SCROLL_CHAIN );    /// Flags
 ui_object_set_themeable_style_property(ui_modalcontainer, LV_PART_MAIN| LV_STATE_DEFAULT, LV_STYLE_BG_COLOR, _ui_theme_color_White);
 ui_object_set_themeable_style_property(ui_modalcontainer, LV_PART_MAIN| LV_STATE_DEFAULT, LV_STYLE_BG_OPA, _ui_theme_alpha_White);
 lv_obj_set_style_border_side(ui_modalcontainer, LV_BORDER_SIDE_NONE, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_transform_pivot_x(ui_modalcontainer, 100, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_transform_pivot_y(ui_modalcontainer, 100, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_pad_left(ui_modalcontainer, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_pad_right(ui_modalcontainer, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_pad_top(ui_modalcontainer, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_pad_bottom(ui_modalcontainer, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_transform_pivot_x(ui_modalcontainer, 97, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_transform_pivot_y(ui_modalcontainer, 80, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_modal = lv_obj_create(ui_modalcontainer);
 lv_obj_set_width( ui_modal, 200);
@@ -1876,7 +1883,7 @@ ui_roundnum= NULL;
 ui_Panel6= NULL;
 ui_riichi2= NULL;
 ui_dot2= NULL;
-ui_Label5= NULL;
+ui_doracount= NULL;
 ui_riichi1= NULL;
 ui_dot1= NULL;
 ui_dot3= NULL;
@@ -1886,7 +1893,7 @@ ui_dot6= NULL;
 ui_dot7= NULL;
 ui_dot8= NULL;
 ui_dot9= NULL;
-ui_Label3= NULL;
+ui_honbacount= NULL;
 ui_modalcontainer= NULL;
 ui_modal= NULL;
 ui_modalcontent= NULL;

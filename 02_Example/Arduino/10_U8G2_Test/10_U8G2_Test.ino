@@ -75,7 +75,6 @@ static int rotationIndex = 0;
 static int modalContentStep = -1;
 static ST7305_U8g2 lcd(RLCD_SCK_PIN, RLCD_MOSI_PIN, RLCD_DC_PIN, RLCD_CS_PIN, RLCD_RST_PIN);
 static U8G2 *u8g2 = nullptr;
-//static int switchState[] = {0,0,0,0};
 static int lightState[] = {0,0,0,0};
 
 static uint32_t counter = 0;
@@ -123,6 +122,11 @@ unsigned long lastTriggered[LIGHT_SENSORS_COUNT] = {0,0,0,0};
 
 bool isArmedArr[LIGHT_SENSORS_COUNT] = {false,false,false,false}; // Tracks if a sensor is primed to fire
 
+
+static void anim_rotation_cb(lv_obj_t * obj, int32_t v)
+{
+    lv_obj_set_style_transform_rotation(obj, v, 0);
+}
 
 
 
@@ -667,6 +671,9 @@ void Codec_LoopTask(void *arg) {
     }
   }
 }
+static int carryoverDora = 0;
+static int currentDoraCount = 0;
+
 void screen1TimeoutTask() {
   // sensor id -> user
   int sensorMap[] = {1,2,0,3};
@@ -682,11 +689,15 @@ void screen1TimeoutTask() {
       }
     riichi_count += (currentStateArr[i] == STATE_STABLE_COVERED) ? 1 : 0;
   }
-  // "Player" (6) + Number (1) + Null terminator (1) = 8 bytes needed
-  char result[3]; 
-  // Concatenate safely
-  snprintf(result, sizeof(result), "%s%d", "x", riichi_count);
-  lv_label_set_text(ui_Label5,result);
+  if (currentDoraCount != riichi_count) {
+    // "Player" (6) + Number (1) + Null terminator (1) = 8 bytes needed
+    char result[3]; 
+    // Concatenate safely
+    snprintf(result, sizeof(result), "%d", riichi_count+ carryoverDora);
+    currentDoraCount = riichi_count;
+    lv_label_set_text(ui_doracount, result);
+  }
+  
 
 }
 void screen2TimeoutTask() {
@@ -695,7 +706,7 @@ void screen2TimeoutTask() {
   lv_bar_set_value(ui_Bar3, lightState[2], LV_ANIM_ON); 
   lv_bar_set_value(ui_Bar4, lightState[3], LV_ANIM_ON);
 }
-void handleScreenTimeoutTask() {
+void handleScreenTimeoutTask(lv_timer_t * timer) {
   lv_obj_t * current_screen = lv_screen_active();
   lv_obj_t * next_screen = NULL;
 
@@ -907,9 +918,6 @@ void SENSOR_LoopTask(void *arg) {
   }
 }
 
-static void bar1_update_cb(lv_timer_t * timer) {
-  handleScreenTimeoutTask();
-}
 
 
 
@@ -919,8 +927,29 @@ const unsigned long interval = 2000; // Interval in milliseconds (1 second)
 
 
 void setupTimers() {
- lv_timer_create(bar1_update_cb, 100, NULL);
+ lv_timer_create(handleScreenTimeoutTask, 100, NULL);
+
+  // lv_anim_t a;
+  // lv_anim_init(&a);
+  // lv_anim_set_var(&a, ui_roundpane);
+  // lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)anim_rotation_cb);
+
+  // lv_anim_set_values(&a, 0, 3600); // 0 to 360 degrees (0.1 deg increments)
+  // lv_anim_set_duration(&a, 3000);  // 3 seconds
+  // lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE); // Loop forever
+  // lv_anim_start(&a);
 }
+
+void incrementRound(bool changeWinds, bool resetHonba) {
+  if (changeWinds) {
+    
+  }
+  if (resetHonba) {
+
+  }
+
+}
+
 void setup()
 {
   audio_ptr = (uint8_t *)heap_caps_malloc(288 * 1000 * sizeof(uint8_t), MALLOC_CAP_SPIRAM);
@@ -931,10 +960,8 @@ void setup()
 
 
    RlcdPort.RLCD_Init();
-     Serial.println("attempting port");
 
    Lvgl_PortInit(300, 300, Lvgl_FlushCallback);
-     Serial.println("attempting lvgl");
 
    if (Lvgl_lock(-1)) {
     ui_init();
@@ -944,8 +971,6 @@ void setup()
     Lvgl_unlock();
 
    }
-
-  
 
   last_report_ms = millis();
   CodecGroups = xEventGroupCreate();
@@ -959,13 +984,10 @@ void setup()
   xTaskCreatePinnedToCore(KEY_LoopTask, "KEY_LoopTask", 4 * 1024, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(TL_LoopTask, "TL_LoopTask", 4 * 1024, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(TR_LoopTask, "TR_LoopTask", 4 * 1024, NULL, 2, NULL, 1);
-
   xTaskCreatePinnedToCore(BR_LoopTask, "BR_LoopTask", 4 * 1024, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(BL_LoopTask, "BL_LoopTask", 4 * 1024, NULL, 2, NULL, 1);
-
   xTaskCreatePinnedToCore(Codec_LoopTask, "Codec_LoopTask", 4 * 1024, NULL, 4, NULL, 1);
   xTaskCreatePinnedToCore(SENSOR_LoopTask, "SENSOR_LoopTask", 4 * 1024, NULL, 4, NULL, 1);
-
   for(int i=0; i<n; i++)
   {
     pinMode(selectPins[i],OUTPUT);
@@ -973,41 +995,7 @@ void setup()
 
   Serial.println("ST7305 U8g2 counter demo started");
 }
-void loopSwitches() {
-  
-  for(int i=12; i<16; i++)
-  {
-  
-    int s0 = (i>>0)&1;
-    int s1 = (i>>1)&1;
-    int s2 = (i>>2)&1;
-    int s3 = (i>>3)&1;
-    digitalWrite(selectPins[0], s0);
-    digitalWrite(selectPins[1], s1);
-    digitalWrite(selectPins[2], s2);
-    digitalWrite(selectPins[3], s3);
-    delay(10);
-    switchState[i-12] = analogRead(signalPin)<2048;
-  }
-}
 
-void loopLightsensors() {
-    for(int i=8; i<12; i++)
-  {
-  
-    int s0 = (i>>0)&1;
-    int s1 = (i>>1)&1;
-    int s2 = (i>>2)&1;
-    int s3 = (i>>3)&1;
-    digitalWrite(selectPins[0], s0);
-    digitalWrite(selectPins[1], s1);
-    digitalWrite(selectPins[2], s2);
-    digitalWrite(selectPins[3], s3);
-    delay(10);
-
-    lightState[i-8] = floor(180.0*analogRead(signalPin)/4095.0);
-  }
-}
 
 void loop()
 {
