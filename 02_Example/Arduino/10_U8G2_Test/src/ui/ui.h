@@ -34,8 +34,6 @@ extern "C" {
 #include "ui_Screen2.h"
 
 ///////////////////// VARIABLES ////////////////////
-extern lv_anim_t * floatup_Animation( lv_obj_t *TargetObject, int delay);
-extern lv_anim_t * floatdown_Animation( lv_obj_t *TargetObject, int delay);
 
 // EVENTS
 extern lv_obj_t *ui____initial_actions0;

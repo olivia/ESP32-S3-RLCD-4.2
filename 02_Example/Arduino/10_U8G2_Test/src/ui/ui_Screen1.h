@@ -38,7 +38,6 @@ extern lv_obj_t *ui_dot8;
 extern lv_obj_t *ui_dot9;
 extern lv_obj_t *ui_honbacount;
 extern lv_obj_t *ui_modalcontainer;
-extern void ui_event_modal( lv_event_t * e);
 extern lv_obj_t *ui_modal;
 extern lv_obj_t *ui_modalcontent;
 extern lv_obj_t *ui_win1;
