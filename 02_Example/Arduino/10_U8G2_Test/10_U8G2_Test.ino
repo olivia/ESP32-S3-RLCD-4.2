@@ -98,6 +98,34 @@ static bool is_Music = true;
 EventGroupHandle_t CodecGroups;
 static bool showSensors = false;
 
+
+#define LIGHT_SENSORS_COUNT 4
+typedef enum {
+    STATE_STABLE_COVERED       = 5, // Light is low and steady (covered)
+
+    STATE_STABLE_DARK       = 0, // Light is low and steady (covered)
+    STATE_STABLE_BRIGHT     = 1, // Light is high and steady (uncovered)
+    STATE_RAPID_COVERING    = 2, // Signal is plunging sharply (hand dropping over it)
+    STATE_RAPID_UNCOVERING  = 3, // Signal is spiking sharply (hand lifting away)
+    STATE_GRADUAL_CHANGING  = 4  // Signal is moving slowly (room lights dimming/brightening)
+} SensorState_t;
+// Filter histories (shifted left by 8 bits for fixed-point math)
+static int32_t emaFastScaledArr[LIGHT_SENSORS_COUNT] = { -1, -1, -1, -1 }; 
+static int32_t emaSlowScaledArr[LIGHT_SENSORS_COUNT] = { -1, -1, -1, -1 };
+
+// State tracking histories for edge detection
+static SensorState_t currentStateArr[LIGHT_SENSORS_COUNT] = { STATE_STABLE_DARK, STATE_STABLE_DARK, STATE_STABLE_DARK, STATE_STABLE_DARK };
+static SensorState_t previousStateArr[LIGHT_SENSORS_COUNT] = { STATE_STABLE_DARK, STATE_STABLE_DARK, STATE_STABLE_DARK, STATE_STABLE_DARK };
+
+
+uint16_t stableSettleCounterArr[LIGHT_SENSORS_COUNT] = {0,0,0,0};
+unsigned long lastTriggered[LIGHT_SENSORS_COUNT] = {0,0,0,0};
+
+bool isArmedArr[LIGHT_SENSORS_COUNT] = {false,false,false,false}; // Tracks if a sensor is primed to fire
+
+
+
+
 DisplayPort RlcdPort(12, 11, 5, 40, 41, 400, 300);
 
 static void Lvgl_FlushCallback(lv_display_t *drv, const lv_area_t *area, uint8_t *color_map) {
@@ -230,7 +258,6 @@ int getRonScore(int hanIndex, int fuIndex) {
 int roundScore(int score) {
   int scoreOffset = score % 100 ? 1: 0;
   int flooredScore = score/100;
-  Serial.printf("score %d", flooredScore);
   return 100 * (flooredScore + scoreOffset);
 }
 
@@ -550,7 +577,6 @@ void repaintPlayers() {
 
 void handleButton(int button) {
   int offsetButton = (button + 4 - rotationIndex) & 3;
-  Serial.printf("%d  %d", modalContentStep, offsetButton);
   switch (modalContentStep) {
     case -1:
       break;
@@ -570,7 +596,6 @@ void handleButton(int button) {
       handleModalStep5(offsetButton);
       break;
     default:
-      Serial.println("can't handle");
       break;
   }
 
@@ -641,17 +666,49 @@ void Codec_LoopTask(void *arg) {
   }
 }
 
+void handleScreenTimeoutTask() {
+  lv_obj_t * current_screen = lv_screen_active();
+  lv_obj_t * next_screen = NULL;
+
+  // 1. Identify which screen is currently on the display
+  if (current_screen == ui_Screen1) {
+    int riichi_count = 0; 
+    for (int i=0; i<4;i++) {
+        lv_obj_t * riichi_icon;
+        riichi_icon = ui_comp_get_child(getPlayerComponent(i), UI_COMP_PLAYER_PANEL9_RIICHI);
+        if (!lv_obj_has_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN) && currentStateArr[i] != STATE_STABLE_COVERED ) {
+          lv_obj_add_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN);
+
+        } else if (lv_obj_has_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN)&& currentStateArr[i] == STATE_STABLE_COVERED ) {
+          lv_obj_remove_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN);
+        }
+      riichi_count += (currentStateArr[i] == STATE_STABLE_COVERED) ? 1 : 0;
+    }
+    // "Player" (6) + Number (1) + Null terminator (1) = 8 bytes needed
+    char result[3]; 
+    // Concatenate safely
+    snprintf(result, sizeof(result), "%s%d", "x", riichi_count);
+    lv_label_set_text(ui_Label5,result);
+  } 
+  else if (current_screen == ui_Screen2) {
+    lv_bar_set_value(ui_Bar1, lightState[0], LV_ANIM_ON); 
+    lv_bar_set_value(ui_Bar2, lightState[1], LV_ANIM_ON); 
+    lv_bar_set_value(ui_Bar3, lightState[2], LV_ANIM_ON); 
+    lv_bar_set_value(ui_Bar4, lightState[3], LV_ANIM_ON);
+  } 
+
+
+}
+
 void KEY_LoopTask(void *arg) {
   for (;;) {
     EventBits_t even = xEventGroupWaitBits(GP18ButtonGroups, (0x01 | 0x02 | 0x04), pdTRUE, pdFALSE, pdMS_TO_TICKS(2000));
     if (even & 0x01) {
       // is_Music = false;
-       Serial.println("Press button");
       is_Music = true;
       xEventGroupSetBits(CodecGroups, 0x04);
     } else if (even & 0x02) {
       is_Music = true;
-      Serial.println("Press other button");
       xEventGroupSetBits(CodecGroups, 0x04);
     } else if (even & 0x04) {
       if (Lvgl_lock(-1)) {
@@ -683,7 +740,6 @@ void TL_LoopTask(void *arg) {
   for (;;) {
     EventBits_t even = xEventGroupWaitBits(TLButtonGroups, (0x01 | 0x02 | 0x04), pdTRUE, pdFALSE, pdMS_TO_TICKS(2000));
     if (even & 0x01) {
-      Serial.println("TL Click");
       if (Lvgl_lock(-1)) {
 
         handleButton(2);
@@ -692,7 +748,6 @@ void TL_LoopTask(void *arg) {
       }
 
     } else if (even & 0x02) {
-      Serial.println("TL DClick");
       if (Lvgl_lock(-1)) {
         lv_obj_t * current_screen = lv_screen_active();
         uint32_t pressed_key = LV_KEY_NEXT;
@@ -702,6 +757,7 @@ void TL_LoopTask(void *arg) {
       }
     } else if (even & 0x04) {
       if (Lvgl_lock(-1)) {
+        // RlcdPort.SetRotation(180);
         setRotation(2);
         setModalVisibility(true);
         Lvgl_unlock();
@@ -716,17 +772,16 @@ void TR_LoopTask(void *arg) {
     EventBits_t even = xEventGroupWaitBits(TRButtonGroups, (0x01 | 0x02 | 0x04), pdTRUE, pdFALSE, pdMS_TO_TICKS(2000));
 
     if (even & 0x01) {
-          Serial.println("TR Click");
 
       if (Lvgl_lock(-1)) {
         handleButton(1);
         Lvgl_unlock();
       }
     } else if (even & 0x02) {
-      Serial.println("TR Double Click");
 
     } else if (even & 0x04) {
       if (Lvgl_lock(-1)) {
+//        RlcdPort.SetRotation(90);
         setRotation(1);
         setModalVisibility(true);
         Lvgl_unlock();
@@ -745,10 +800,10 @@ void BR_LoopTask(void *arg) {
         Lvgl_unlock();
       }    
     } else if (even & 0x02) {
-      Serial.println("BR DClick");
     } else if (even & 0x04) {
       modalOpen = !modalOpen;
       if (Lvgl_lock(-1)) {
+        // RlcdPort.SetRotation(0);
         setRotation(0);
         setModalVisibility(true);
 
@@ -766,9 +821,9 @@ void BL_LoopTask(void *arg) {
         handleButton(3);
         Lvgl_unlock();
       }    } else if (even & 0x02) {
-      Serial.println("BL DClick");
     } else if (even & 0x04) {
       if (Lvgl_lock(-1)) {
+        // RlcdPort.SetRotation(270);
         setRotation(3);
         setModalVisibility(true);
 
@@ -778,33 +833,8 @@ void BL_LoopTask(void *arg) {
   }
 }
 
-#define LIGHT_SENSORS_COUNT 4
-typedef enum {
-    STATE_STABLE_COVERED       = 5, // Light is low and steady (covered)
-
-    STATE_STABLE_DARK       = 0, // Light is low and steady (covered)
-    STATE_STABLE_BRIGHT     = 1, // Light is high and steady (uncovered)
-    STATE_RAPID_COVERING    = 2, // Signal is plunging sharply (hand dropping over it)
-    STATE_RAPID_UNCOVERING  = 3, // Signal is spiking sharply (hand lifting away)
-    STATE_GRADUAL_CHANGING  = 4  // Signal is moving slowly (room lights dimming/brightening)
-} SensorState_t;
 
 
-
-
-// Filter histories (shifted left by 8 bits for fixed-point math)
-static int32_t emaFastScaledArr[LIGHT_SENSORS_COUNT] = { -1, -1, -1, -1 }; 
-static int32_t emaSlowScaledArr[LIGHT_SENSORS_COUNT] = { -1, -1, -1, -1 };
-
-// State tracking histories for edge detection
-static SensorState_t currentStateArr[LIGHT_SENSORS_COUNT] = { STATE_STABLE_DARK, STATE_STABLE_DARK, STATE_STABLE_DARK, STATE_STABLE_DARK };
-static SensorState_t previousStateArr[LIGHT_SENSORS_COUNT] = { STATE_STABLE_DARK, STATE_STABLE_DARK, STATE_STABLE_DARK, STATE_STABLE_DARK };
-
-
-uint16_t stableSettleCounterArr[LIGHT_SENSORS_COUNT] = {0,0,0,0};
-unsigned long lastTriggered[LIGHT_SENSORS_COUNT] = {0,0,0,0};
-
-bool isArmedArr[LIGHT_SENSORS_COUNT] = {false,false,false,false}; // Tracks if a sensor is primed to fire
 void processLightSensor(int rawValue, int sensor_id) {
     long currTime = millis();
     SensorState_t prevState = currentStateArr[sensor_id];
@@ -814,9 +844,8 @@ void processLightSensor(int rawValue, int sensor_id) {
       currentStateArr[sensor_id] = currState;
       stateChange = true;
     }
-    else if (prevState != STATE_STABLE_COVERED && rawValue < 250 && (lastTriggered[sensor_id] + 1000 * 1) < currTime) {
+    else if (prevState != STATE_STABLE_COVERED && rawValue < 250 && (lastTriggered[sensor_id] + 5000 * 1) < currTime) {
         is_Music = true;
-            Serial.println("playing the muse");
 
         currState = STATE_STABLE_COVERED;
         currentStateArr[sensor_id] = currState;
@@ -869,46 +898,7 @@ void SENSOR_LoopTask(void *arg) {
 }
 
 static void bar1_update_cb(lv_timer_t * timer) {
-
-    lv_bar_set_value(ui_Bar1, lightState[0], LV_ANIM_ON); 
-    lv_bar_set_value(ui_Bar2, lightState[1], LV_ANIM_ON); 
-    lv_bar_set_value(ui_Bar3, lightState[2], LV_ANIM_ON); 
-    lv_bar_set_value(ui_Bar4, lightState[3], LV_ANIM_ON);
-    int riichi_count = 0; 
-    for (int i=0; i<4;i++) {
-        lv_obj_t * cui_player;
-        lv_obj_t * riichi_icon;
-        switch(i) {
-            case 0:
-                cui_player = ui_player2;
-                break;
-            case 1:
-                cui_player = ui_player3;
-                break;
-            case 2:
-                cui_player = ui_player1;
-                break;
-            case 3:
-                cui_player = ui_player4;
-                break;
-            default:
-                cui_player = ui_player1;
-        }
-        riichi_icon = ui_comp_get_child(cui_player, UI_COMP_PLAYER_PANEL9_RIICHI);
-        if (!lv_obj_has_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN) && currentStateArr[i] != STATE_STABLE_COVERED ) {
-          lv_obj_add_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN);
-
-        } else if (lv_obj_has_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN)&& currentStateArr[i] == STATE_STABLE_COVERED ) {
-          lv_obj_remove_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN);
-        }
-        riichi_count += (currentStateArr[i] == STATE_STABLE_COVERED) ? 1 : 0;
-    }
-        // "Player" (6) + Number (1) + Null terminator (1) = 8 bytes needed
-    char result[3]; 
-
-    // Concatenate safely
-    snprintf(result, sizeof(result), "%s%d", "x", riichi_count);
-    lv_label_set_text(ui_Label5,result);
+  handleScreenTimeoutTask();
 }
 
 
