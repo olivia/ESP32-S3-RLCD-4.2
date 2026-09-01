@@ -71,6 +71,19 @@ static lv_subject_t bl_score_subject;
 static lv_subject_t * subject_scores[] = {&br_score_subject, &tr_score_subject, &tl_score_subject, &bl_score_subject}; 
 
 
+static lv_subject_t modal_title_subject;
+static char curr_modal_title_text_buffer[128];
+static char prev_modal_title_text_buffer[128];
+
+static lv_subject_t selectoption_subject;
+static char curr_selectoption_text_buffer[128];
+static char prev_selectoption_text_buffer[128];
+
+static lv_subject_t optiondescription_subject;
+static char curr_optiondescription_text_buffer[128];
+static char prev_optiondescription_text_buffer[128];
+
+
 static int rotationIndex = 0;
 static int modalContentStep = -1;
 static ST7305_U8g2 lcd(RLCD_SCK_PIN, RLCD_MOSI_PIN, RLCD_DC_PIN, RLCD_CS_PIN, RLCD_RST_PIN);
@@ -96,6 +109,7 @@ static uint8_t *audio_ptr = NULL;
 static bool is_Music = true;
 EventGroupHandle_t CodecGroups;
 static bool showSensors = false;
+lv_obj_t * modalContentWinArr[9];
 
 
 #define LIGHT_SENSORS_COUNT 4
@@ -186,7 +200,16 @@ char* validHan[] = {"1", "2", "3", "4", "5", "6", "7","8", "9", "10", "11", "12"
 int hanBase[] = {8, 16, 32, 64, 2000, 3000, 3000, 4000, 4000, 4000, 6000, 6000, 8000, 16000, 24000, 32000 };
 int fuMultiplier[] = {20,25,30,40,50,60,70,80,90,100,110, 1};
 char* validFu[] = {"20", "25", "30", "40", "50", "60", "70","80", "90", "100", "110"}; 
-bool modalStepVisited[] = {false, false, false, false, false};
+#define TENPAISTATUSMODAL_INDEX 5
+bool modalStepVisited[] = {
+false, false, false, false, false, 
+// TENPAI MODALS
+false,false,false,false};
+#define PLAYER_NUM 4
+char* tenpaiModalOptions[] = {"NOTEN", "TENPAI"};
+bool playerTenpaiFlags[] = {false, false, false, false};
+int tenpaiStep = 0;
+
 static int hanIndex = 0;
 static int fuIndex = 0;
 static int discarderIndex = 0;
@@ -199,6 +222,19 @@ static int winType = -1;
 static int seatRotationNum = 0;
 static int repeatNum = 0;
 
+int playersInTenpai() {
+  int tenpaiPlayers = 0;
+  for (int i=0; i< PLAYER_NUM; i++) {
+    tenpaiPlayers += playerTenpaiFlags[i];
+  }  
+  return tenpaiPlayers;
+}
+
+int calcTenpaiPayments() {
+  int payments[] = {0, 3000, 1500, 1000, 0};
+  return payments[playersInTenpai()];
+}
+
 
 void setupObservers() {
   lv_subject_init_string(&br_name_subject, curr_br_name_text_buffer, prev_br_name_text_buffer, sizeof(curr_br_name_text_buffer), discarders[0]);
@@ -209,6 +245,10 @@ void setupObservers() {
   lv_subject_init_string(&tl_wind_subject, curr_tl_wind_text_buffer, prev_tl_wind_text_buffer, sizeof(curr_tl_wind_text_buffer), winds[2]);
   lv_subject_init_string(&bl_name_subject, curr_bl_name_text_buffer, prev_bl_name_text_buffer, sizeof(curr_bl_name_text_buffer), discarders[3]);
   lv_subject_init_string(&bl_wind_subject, curr_bl_wind_text_buffer, prev_bl_wind_text_buffer, sizeof(curr_bl_wind_text_buffer), winds[3]);
+  lv_subject_init_string(&modal_title_subject, curr_modal_title_text_buffer, prev_modal_title_text_buffer, sizeof(curr_modal_title_text_buffer), "DRAW");
+  lv_subject_init_string(&selectoption_subject, curr_selectoption_text_buffer, prev_selectoption_text_buffer, sizeof(curr_selectoption_text_buffer), tenpaiModalOptions[0]);
+  lv_subject_init_string(&optiondescription_subject, curr_optiondescription_text_buffer, prev_optiondescription_text_buffer, sizeof(curr_optiondescription_text_buffer), discarders[0]);
+
   //scores
   lv_subject_init_int(&br_score_subject, 25000);
   lv_subject_init_int(&tr_score_subject, 25000);
@@ -233,6 +273,11 @@ void setupObservers() {
   lv_label_bind_text(ui_comp_get_child(ui_player4, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), &bl_name_subject, "%s");
   lv_label_bind_text(ui_comp_get_child(ui_player4, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), &bl_wind_subject, "%s");
   lv_label_bind_text(ui_comp_get_child(ui_player4, UI_COMP_PLAYER_PANEL9_PANEL8_SCORE), &bl_score_subject, "%d");
+  
+  lv_label_bind_text(ui_modaltitle, &modal_title_subject, "%s");
+  lv_label_bind_text(ui_selectoption, &selectoption_subject, "%s");
+  lv_label_bind_text(ui_optiondescription, &optiondescription_subject, "%s");
+
 }
 
 
@@ -277,10 +322,22 @@ void applyTsumoOffsets(int playerId, int dealerScore, int nonDealerScore ) {
 }
 
 void setupStepValues(int step) {
-  if (step == 4) {
-    if (hanIndex >= 4) {
+  if (step == 0) {
+    lv_subject_copy_string(&modal_title_subject, discarders[rotationIndex]);
+  } else if (step >= TENPAISTATUSMODAL_INDEX && step < TENPAISTATUSMODAL_INDEX + 4) {
+    lv_subject_copy_string(&modal_title_subject, "DRAW");
+    lv_subject_copy_string(&optiondescription_subject, discarders[(step - TENPAISTATUSMODAL_INDEX + rotationIndex) & 3]);
+    lv_subject_copy_string(&selectoption_subject, tenpaiModalOptions[playerTenpaiFlags[step- TENPAISTATUSMODAL_INDEX]]);
+  }
+  else if (step == 4) {
+    lv_subject_copy_string(&modal_title_subject, "RESULTS");
+    if (winType == 2) {
+      lv_obj_add_flag(ui_handscore, LV_OBJ_FLAG_HIDDEN);
+    } else if (hanIndex >= 4) {
+      lv_obj_remove_flag(ui_scoredescription, LV_OBJ_FLAG_HIDDEN);
       lv_obj_add_flag(ui_fucontainerdetail, LV_OBJ_FLAG_HIDDEN);
     } else {
+      lv_obj_remove_flag(ui_scoredescription, LV_OBJ_FLAG_HIDDEN);
       lv_obj_remove_flag(ui_funumdetail, LV_OBJ_FLAG_HIDDEN);
       lv_label_set_text(ui_funumdetail, validFu[fuIndex]);
     }
@@ -326,9 +383,24 @@ void setupStepValues(int step) {
       lv_label_set_text(ui_auxpayernamedetail, "NON-DEALER");
       lv_label_set_text(ui_payerscoredetail, dealerScore);
       lv_label_set_text(ui_auxpayerscoredetail, nonDealerScore);
+    } else if (winType == 2) {
+      // DRAW
+      int negPayments[] = {0, -1000, -1500, -3000, 0};
+      int posPayments[] = {0, 3000, 1500, 1000, 0};
+      int tenpaiNum = playersInTenpai();
+      char payerScore[100];
+      sprintf(payerScore, "%d", -negPayments[tenpaiNum]);
+
+      lv_label_set_text(ui_payernamedetail, "NOTEN");
+      lv_label_set_text(ui_payerscoredetail, payerScore);
+
+      for (int i = 0; i < 4; i++) {
+        scoreOffsets[(rotationIndex+i)&3] = playerTenpaiFlags[i] ? posPayments[tenpaiNum] : negPayments[tenpaiNum];
+      }
     }
     repaintPlayers();
   }
+  
 }
 void initStepValues(int step) {
   switch (step) {
@@ -346,6 +418,13 @@ void initStepValues(int step) {
       break;
     case 4:
       break;
+    case 5:
+    case 6:
+    case 7:
+    case 8:
+      playerTenpaiFlags[step- TENPAISTATUSMODAL_INDEX] = 0;
+    break;
+
     default:
       break;
   }
@@ -377,32 +456,34 @@ void transitionToStep(int nextStep) {
   setupStepValues(nextStep);
 }
 
-lv_obj_t * getModalStepContent(int index) {
-  switch (index) {
-    case 0:
-      return ui_win1;
-      break;
-    case 1:
-      return ui_win2;
-      break;
-    case 2:
-      return ui_win3;
-      break;
-    case 3:
-      return ui_win4;
-      break;
-    case 4:
-      return ui_win5;
-      break;
-    default:
-      return NULL;
-  }
+
+
+void setupModalContentArr() {
+  modalContentWinArr[0] = ui_win1;
+  modalContentWinArr[1] = ui_win2;
+  modalContentWinArr[2] = ui_win3;
+  modalContentWinArr[3] = ui_win4;
+  modalContentWinArr[4] = ui_win5;
+  modalContentWinArr[TENPAISTATUSMODAL_INDEX] = ui_selectoptioncontent;
+  modalContentWinArr[TENPAISTATUSMODAL_INDEX + 1] = ui_selectoptioncontent;
+  modalContentWinArr[TENPAISTATUSMODAL_INDEX + 2] = ui_selectoptioncontent;
+  modalContentWinArr[TENPAISTATUSMODAL_INDEX + 3] = ui_selectoptioncontent;
 }
+// Automatically calculate the number of elements in the array
+
+lv_obj_t * getModalStepContent(int index) {
+  // Safe bounds check: Ensure index is between 0 and the maximum array size
+  if (index >= 0 && index < 9) {
+    return modalContentWinArr[index];
+  }
+  return NULL;
+}
+
 void handleModalStep1(int button) {
   switch(button) {
     case 0:
       winType = 2;
-      transitionToStep(1);
+      transitionToStep(TENPAISTATUSMODAL_INDEX);
       break;
     case 1:
       // Ron
@@ -514,8 +595,47 @@ void applyPlayerOffsets() {
   repaintPlayers();
 }
 
+// struct ModalSelectOptionRoute {
+//   char titleLabel[20];
+//   char prevLabel[20];
+//   char nextLabel[20];
+//   char selectLabel[20];
+//   char * optionLabels[];
+// };
+
+// ModalSelectOptionRoute routes[] = {
+//   {""}
+// }
+
+void handleTenpaiStatusModal(int button) {
+  int newIndex;
+  bool skipFu = hanIndex >= 4;
+  int tenpaiPlayerIndex = modalContentStep - TENPAISTATUSMODAL_INDEX;
+
+  switch(button) {
+    case 0:
+      //playerTenpaiFlags
+      lv_subject_copy_string(&selectoption_subject, tenpaiModalOptions[0]);
+      transitionToStep(modalContentStep == (TENPAISTATUSMODAL_INDEX + 3) ? (TENPAISTATUSMODAL_INDEX - 1) : (modalContentStep + 1));
+      break;
+    case 1:
+    case 2:
+      playerTenpaiFlags[tenpaiPlayerIndex] = !playerTenpaiFlags[tenpaiPlayerIndex];
+      lv_subject_copy_string(&selectoption_subject, tenpaiModalOptions[playerTenpaiFlags[tenpaiPlayerIndex]]);
+      break;
+    case 3:      
+      lv_subject_copy_string(&selectoption_subject, tenpaiModalOptions[0]);
+      transitionToStep(modalContentStep == TENPAISTATUSMODAL_INDEX ? 0 : (modalContentStep - 1));
+      break;
+    default: 
+      break;
+  }
+}
+
+
 void handleModalStep5(int button) {
   bool skipDiscard = !!winType;
+  bool isDraw = winType == 2;
   bool skipFu = hanIndex >= 4;
 
     switch(button) {
@@ -528,13 +648,59 @@ void handleModalStep5(int button) {
     case 2:
       break;
     case 3:
-      transitionToStep(skipDiscard ? skipFu ? 1 : 2 : 3);
+      transitionToStep(isDraw ? (TENPAISTATUSMODAL_INDEX + 3) : skipDiscard ? skipFu ? 1 : 2 : 3);
       clearPlayerOffsets();
       break;
     default: 
       break;
     }
 }
+
+void (*modalHandlers[])(int) = {
+  handleModalStep1,
+  handleModalStep2,
+  handleModalStep3,
+  handleModalStep4,
+  handleModalStep5,
+  handleTenpaiStatusModal,
+  handleTenpaiStatusModal,
+  handleTenpaiStatusModal,
+  handleTenpaiStatusModal
+};
+
+// 3. Automatically calculate the number of handlers
+#define HANDLERS_ARR_SIZE (sizeof(modalHandlers) / sizeof(modalHandlers[0]))
+
+void handleButton(int button) {
+  int offsetButton = (button + 4 - rotationIndex) & 3;
+  if (modalContentStep >=0 && modalContentStep< HANDLERS_ARR_SIZE) {
+    modalHandlers[modalContentStep](offsetButton);
+  }
+  // switch (modalContentStep) {
+  //   case -1:
+  //     break;
+  //   case 0: 
+  //     handleModalStep1(offsetButton);
+  //     break;
+  //   case 1: 
+  //     handleModalStep2(offsetButton);
+  //     break;
+  //   case 2: 
+  //     handleModalStep3(offsetButton);
+  //     break;
+  //   case 3: 
+  //     handleModalStep4(offsetButton);
+  //     break;
+  //   case 4: 
+  //     handleModalStep5(offsetButton);
+  //     break;
+  //   default:
+  //     break;
+  // }
+
+
+}
+
 
 lv_obj_t * getPlayerComponent(int i) {
   switch (i) {
@@ -578,42 +744,19 @@ void repaintPlayers() {
 }
 
 
-void handleButton(int button) {
-  int offsetButton = (button + 4 - rotationIndex) & 3;
-  switch (modalContentStep) {
-    case -1:
-      break;
-    case 0: 
-      handleModalStep1(offsetButton);
-      break;
-    case 1: 
-      handleModalStep2(offsetButton);
-      break;
-    case 2: 
-      handleModalStep3(offsetButton);
-      break;
-    case 3: 
-      handleModalStep4(offsetButton);
-      break;
-    case 4: 
-      handleModalStep5(offsetButton);
-      break;
-    default:
-      break;
-  }
-
-
-}
-
 void resetModalLabels() {
   modalContentStep = 0;
   hanIndex = 0;
   fuIndex = 2;
   discarderIndex = 0;
+  tenpaiStep = 0;
+  for (int i = 0; i<4; i++) {
+    playerTenpaiFlags[i] = false;
+  }
   lv_label_set_text(ui_fucount, validFu[fuIndex]);
   lv_label_set_text(ui_hancount, validHan[hanIndex]);
   lv_label_set_text(ui_discarder, discarders[(rotationIndex+1)&3]);
-  lv_label_set_text(ui_modalplayer, discarders[rotationIndex]);
+  lv_subject_copy_string(&modal_title_subject, discarders[rotationIndex]);
 }
 void setModalVisibility(bool visible) {
   if (visible) {
@@ -965,6 +1108,7 @@ void setup()
 
    if (Lvgl_lock(-1)) {
     ui_init();
+    setupModalContentArr();
     setupObservers();
     setupTimers();
     repaintPlayers();

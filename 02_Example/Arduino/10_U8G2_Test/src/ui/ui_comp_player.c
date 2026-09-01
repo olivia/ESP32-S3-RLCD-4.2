@@ -29,8 +29,10 @@ lv_obj_set_style_pad_column(cui_player, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 lv_obj_t *cui_Panel30;
 cui_Panel30 = lv_obj_create(cui_player);
-lv_obj_set_width( cui_Panel30, 105);
+lv_obj_set_width( cui_Panel30, 110);
 lv_obj_set_height( cui_Panel30, 18);
+lv_obj_set_x( cui_Panel30, -5 );
+lv_obj_set_y( cui_Panel30, 0 );
 lv_obj_set_align( cui_Panel30, LV_ALIGN_CENTER );
 lv_obj_remove_flag( cui_Panel30, LV_OBJ_FLAG_SCROLLABLE );    /// Flags
 lv_obj_set_style_border_width(cui_Panel30, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
