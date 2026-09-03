@@ -3,11 +3,13 @@
 #include "src/ExternLib/button/button_bsp.h"
 #include "lvgl.h" 
 #include "src/ui/ui.h"
+#include "src/ui/ui_helpers.h"
+
 #include "i2c_bsp.h"
 #include "codec_bsp.h"
 #include "ST7305_U8g2.h"
 #include <esp_timer.h>
-
+#include "src/gif/Roll6.c"
 
 
 #define U8G2_USE_LARGE_FONTS
@@ -68,7 +70,6 @@ static lv_subject_t bl_wind_subject;
 static char curr_bl_wind_text_buffer[128];
 static char prev_bl_wind_text_buffer[128];
 static lv_subject_t bl_score_subject;
-static lv_subject_t * subject_scores[] = {&br_score_subject, &tr_score_subject, &tl_score_subject, &bl_score_subject}; 
 
 
 static lv_subject_t modal_title_subject;
@@ -82,6 +83,13 @@ static char prev_selectoption_text_buffer[128];
 static lv_subject_t optiondescription_subject;
 static char curr_optiondescription_text_buffer[128];
 static char prev_optiondescription_text_buffer[128];
+
+static lv_subject_t honbacount_subject;
+static lv_subject_t doracount_subject;
+
+
+static lv_subject_t * subject_scores[] = {&br_score_subject, &tr_score_subject, &tl_score_subject, &bl_score_subject}; 
+static lv_subject_t * subject_winds[] = {&br_wind_subject, &tr_wind_subject, &tl_wind_subject, &bl_wind_subject}; 
 
 
 static int rotationIndex = 0;
@@ -110,6 +118,13 @@ static bool is_Music = true;
 EventGroupHandle_t CodecGroups;
 static bool showSensors = false;
 lv_obj_t * modalContentWinArr[9];
+
+typedef enum {
+  WT_RON = 0,
+  WT_TSUMO = 1,
+  WT_DRAW = 2,
+  WT_NONE = -1
+} WinType_t;
 
 
 #define LIGHT_SENSORS_COUNT 4
@@ -194,8 +209,9 @@ int signalPin = 17;
 int n = sizeof(selectPins)/sizeof(selectPins[0]);
 
 // ESWN
-char* discarders[] = {"olivia", "stephen", "jay", "porrith"};
+char* discarders[] = {"apple", "banana", "cherry", "dewberry"};
 char* winds[] = {EAST_WIND_STR, SOUTH_WIND_STR, WEST_WIND_STR, NORTH_WIND_STR}; 
+
 char* validHan[] = {"1", "2", "3", "4", "5", "6", "7","8", "9", "10", "11", "12", "Y", "2XY", "3XY", "4XY"}; 
 int hanBase[] = {8, 16, 32, 64, 2000, 3000, 3000, 4000, 4000, 4000, 6000, 6000, 8000, 16000, 24000, 32000 };
 int fuMultiplier[] = {20,25,30,40,50,60,70,80,90,100,110, 1};
@@ -208,19 +224,20 @@ false,false,false,false};
 #define PLAYER_NUM 4
 char* tenpaiModalOptions[] = {"NOTEN", "TENPAI"};
 bool playerTenpaiFlags[] = {false, false, false, false};
-int tenpaiStep = 0;
 
 static int hanIndex = 0;
 static int fuIndex = 0;
 static int discarderIndex = 0;
 // starting from bottom right going counterclockwise
-static int scores[] = {24000, 25000, 25000, 25000};
 static int scoreOffsets[] = {0, 0, 0, 0};
 
 bool modalOpen = false;
-static int winType = -1;
+static WinType_t winType = WT_NONE;
 static int seatRotationNum = 0;
-static int repeatNum = 0;
+static int honbaCount = 0;
+static int carryoverDora = 0;
+static int currentDoraCount = 0;
+
 
 int playersInTenpai() {
   int tenpaiPlayers = 0;
@@ -235,51 +252,208 @@ int calcTenpaiPayments() {
   return payments[playersInTenpai()];
 }
 
+int _scores[] = {
+  25000, 25000, 25000, 25000
+};
 
 void setupObservers() {
   lv_subject_init_string(&br_name_subject, curr_br_name_text_buffer, prev_br_name_text_buffer, sizeof(curr_br_name_text_buffer), discarders[0]);
-  lv_subject_init_string(&br_wind_subject, curr_br_wind_text_buffer, prev_br_wind_text_buffer, sizeof(curr_br_wind_text_buffer), winds[0]);
   lv_subject_init_string(&tr_name_subject, curr_tr_name_text_buffer, prev_tr_name_text_buffer, sizeof(curr_tr_name_text_buffer), discarders[1]);
-  lv_subject_init_string(&tr_wind_subject, curr_tr_wind_text_buffer, prev_tr_wind_text_buffer, sizeof(curr_tr_wind_text_buffer), winds[1]);
   lv_subject_init_string(&tl_name_subject, curr_tl_name_text_buffer, prev_tl_name_text_buffer, sizeof(curr_tl_name_text_buffer), discarders[2]);
-  lv_subject_init_string(&tl_wind_subject, curr_tl_wind_text_buffer, prev_tl_wind_text_buffer, sizeof(curr_tl_wind_text_buffer), winds[2]);
   lv_subject_init_string(&bl_name_subject, curr_bl_name_text_buffer, prev_bl_name_text_buffer, sizeof(curr_bl_name_text_buffer), discarders[3]);
-  lv_subject_init_string(&bl_wind_subject, curr_bl_wind_text_buffer, prev_bl_wind_text_buffer, sizeof(curr_bl_wind_text_buffer), winds[3]);
   lv_subject_init_string(&modal_title_subject, curr_modal_title_text_buffer, prev_modal_title_text_buffer, sizeof(curr_modal_title_text_buffer), "DRAW");
   lv_subject_init_string(&selectoption_subject, curr_selectoption_text_buffer, prev_selectoption_text_buffer, sizeof(curr_selectoption_text_buffer), tenpaiModalOptions[0]);
   lv_subject_init_string(&optiondescription_subject, curr_optiondescription_text_buffer, prev_optiondescription_text_buffer, sizeof(curr_optiondescription_text_buffer), discarders[0]);
 
   //scores
-  lv_subject_init_int(&br_score_subject, 25000);
-  lv_subject_init_int(&tr_score_subject, 25000);
-  lv_subject_init_int(&tl_score_subject, 25000);
-  lv_subject_init_int(&bl_score_subject, 25000);
+  for (int i = 0; i < 4; i++) {
+    lv_subject_init_int(subject_scores[i], _scores[i]);
+  } 
+  lv_subject_init_int(&honbacount_subject, 0);
+  lv_subject_init_int(&doracount_subject, 0);
 
   //cui_offset_score = ui_comp_get_child(cui_player, UI_COMP_PLAYER_PANEL30_OFFSETSCORE);
 
 
-  lv_label_bind_text(ui_comp_get_child(ui_player1, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), &br_name_subject, "%s");
-  lv_label_bind_text(ui_comp_get_child(ui_player1, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), &br_wind_subject, "%s");
-  lv_label_bind_text(ui_comp_get_child(ui_player1, UI_COMP_PLAYER_PANEL9_PANEL8_SCORE), &br_score_subject, "%d");
+  lv_label_bind_text(ui_comp_get_child(ui_player1, UI_COMP_PLAYER_CONTAINER_NAME), &br_name_subject, "%s");
+  lv_label_bind_text(ui_comp_get_child(ui_player1, UI_COMP_PLAYER_PANEL8_SCORE), &br_score_subject, "%d");
 
-  lv_label_bind_text(ui_comp_get_child(ui_player2, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME),&tr_name_subject, "%s");
-  lv_label_bind_text(ui_comp_get_child(ui_player2, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), &tr_wind_subject, "%s");
-  lv_label_bind_text(ui_comp_get_child(ui_player2, UI_COMP_PLAYER_PANEL9_PANEL8_SCORE), &tr_score_subject, "%d");
+  lv_label_bind_text(ui_comp_get_child(ui_player2, UI_COMP_PLAYER_CONTAINER_NAME),&tr_name_subject, "%s");
+  lv_label_bind_text(ui_comp_get_child(ui_player2, UI_COMP_PLAYER_PANEL8_SCORE), &tr_score_subject, "%d");
 
-  lv_label_bind_text(ui_comp_get_child(ui_player3, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), &tl_name_subject, "%s");
-  lv_label_bind_text(ui_comp_get_child(ui_player3, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), &tl_wind_subject, "%s");
-  lv_label_bind_text(ui_comp_get_child(ui_player3, UI_COMP_PLAYER_PANEL9_PANEL8_SCORE), &tl_score_subject, "%d");
+  lv_label_bind_text(ui_comp_get_child(ui_player3, UI_COMP_PLAYER_CONTAINER_NAME), &tl_name_subject, "%s");
+  lv_label_bind_text(ui_comp_get_child(ui_player3, UI_COMP_PLAYER_PANEL8_SCORE), &tl_score_subject, "%d");
 
-  lv_label_bind_text(ui_comp_get_child(ui_player4, UI_COMP_PLAYER_PANEL9_CONTAINER_NAME), &bl_name_subject, "%s");
-  lv_label_bind_text(ui_comp_get_child(ui_player4, UI_COMP_PLAYER_PANEL9_PANEL8_WIND), &bl_wind_subject, "%s");
-  lv_label_bind_text(ui_comp_get_child(ui_player4, UI_COMP_PLAYER_PANEL9_PANEL8_SCORE), &bl_score_subject, "%d");
+  lv_label_bind_text(ui_comp_get_child(ui_player4, UI_COMP_PLAYER_CONTAINER_NAME), &bl_name_subject, "%s");
+  lv_label_bind_text(ui_comp_get_child(ui_player4, UI_COMP_PLAYER_PANEL8_SCORE), &bl_score_subject, "%d");
   
   lv_label_bind_text(ui_modaltitle, &modal_title_subject, "%s");
   lv_label_bind_text(ui_selectoption, &selectoption_subject, "%s");
   lv_label_bind_text(ui_optiondescription, &optiondescription_subject, "%s");
-
+  lv_label_bind_text(ui_doracount, &doracount_subject, "%d");
+  lv_label_bind_text(ui_honbacount, &honbacount_subject, "%d");
 }
 
+typedef struct _anim_user_data_t {
+    lv_obj_t *target;
+    lv_image_dsc_t **imgset;
+    int32_t imgset_size;
+    int32_t val;
+} anim_user_data_t;
+
+
+
+// IMAGES AND IMAGE SETS
+const lv_image_dsc_t *ui_imgset_roll_6_frame__[5] = {&ui_img_roll_6_frame_0_png, &ui_img_roll_6_frame_1_png, &ui_img_roll_6_frame_2_png, &ui_img_roll_6_frame_3_png, &ui_img_roll_6_frame_8_png};
+const lv_image_dsc_t *ui_imgset_roll_5_frame__[5] = {&ui_img_roll_6_frame_0_png, &ui_img_roll_6_frame_1_png, &ui_img_roll_6_frame_2_png, &ui_img_roll_6_frame_3_png, &ui_img_roll_5_frame_7_png};
+const lv_image_dsc_t *ui_imgset_roll_4_frame__[5] = {&ui_img_roll_6_frame_0_png, &ui_img_roll_6_frame_1_png, &ui_img_roll_6_frame_2_png, &ui_img_roll_6_frame_3_png, &ui_img_roll_4_frame_7_png};
+const lv_image_dsc_t *ui_imgset_roll_3_frame__[5] = {&ui_img_roll_6_frame_0_png, &ui_img_roll_6_frame_1_png, &ui_img_roll_6_frame_2_png, &ui_img_roll_6_frame_3_png, &ui_img_roll_3_frame_7_png};
+const lv_image_dsc_t *ui_imgset_roll_2_frame__[5] = {&ui_img_roll_6_frame_0_png, &ui_img_roll_6_frame_1_png, &ui_img_roll_6_frame_2_png, &ui_img_roll_6_frame_3_png, &ui_img_roll_2_frame_7_png};
+const lv_image_dsc_t *ui_imgset_roll_1_frame__[5] = {&ui_img_roll_6_frame_0_png, &ui_img_roll_6_frame_1_png, &ui_img_roll_6_frame_2_png, &ui_img_roll_6_frame_3_png, &ui_img_roll_1_frame_7_png};
+const lv_image_dsc_t *ui_imgset_roll_6_inv_frame__[5] = {&ui_img_roll_6_inv_frame_0_png, &ui_img_roll_6_inv_frame_1_png, &ui_img_roll_6_inv_frame_2_png, &ui_img_roll_6_inv_frame_3_png, &ui_img_roll_6_inv_frame_8_png};
+const lv_image_dsc_t *ui_imgset_roll_5_inv_frame__[5] = {&ui_img_roll_6_inv_frame_0_png, &ui_img_roll_6_inv_frame_1_png, &ui_img_roll_6_inv_frame_2_png, &ui_img_roll_6_inv_frame_3_png, &ui_img_roll_5_inv_frame_7_png};
+const lv_image_dsc_t *ui_imgset_roll_4_inv_frame__[5] = {&ui_img_roll_6_inv_frame_0_png, &ui_img_roll_6_inv_frame_1_png, &ui_img_roll_6_inv_frame_2_png, &ui_img_roll_6_inv_frame_3_png, &ui_img_roll_4_inv_frame_7_png};
+const lv_image_dsc_t *ui_imgset_roll_3_inv_frame__[5] = {&ui_img_roll_6_inv_frame_0_png, &ui_img_roll_6_inv_frame_1_png, &ui_img_roll_6_inv_frame_2_png, &ui_img_roll_6_inv_frame_3_png, &ui_img_roll_3_inv_frame_7_png};
+const lv_image_dsc_t *ui_imgset_roll_2_inv_frame__[5] = {&ui_img_roll_6_inv_frame_0_png, &ui_img_roll_6_inv_frame_1_png, &ui_img_roll_6_inv_frame_2_png, &ui_img_roll_6_inv_frame_3_png, &ui_img_roll_2_inv_frame_7_png};
+const lv_image_dsc_t *ui_imgset_roll_1_inv_frame__[5] = {&ui_img_roll_6_inv_frame_0_png, &ui_img_roll_6_inv_frame_1_png, &ui_img_roll_6_inv_frame_2_png, &ui_img_roll_6_inv_frame_3_png, &ui_img_roll_1_inv_frame_7_png};
+
+
+const lv_image_dsc_t **allRolls[] = {ui_imgset_roll_6_frame__,ui_imgset_roll_5_frame__,ui_imgset_roll_4_frame__,ui_imgset_roll_3_frame__,ui_imgset_roll_2_frame__,ui_imgset_roll_1_frame__};
+const lv_image_dsc_t **allRollsInv[] = {ui_imgset_roll_6_inv_frame__,ui_imgset_roll_5_inv_frame__,ui_imgset_roll_4_inv_frame__,ui_imgset_roll_3_inv_frame__,ui_imgset_roll_2_inv_frame__,ui_imgset_roll_1_inv_frame__};
+///////////////////// ANIMATIONS ////////////////////
+
+
+ void anim_x_cb(void * var, int32_t v) {
+    lv_obj_set_x((lv_obj_t *)var, v);
+}
+
+ void anim_y_cb(void * var, int32_t v) {
+    lv_obj_set_y((lv_obj_t *)var, v);
+}
+
+/**
+ * Create a playback animation
+ */
+void anim_x(void)
+{
+    lv_obj_t * obj = ui_diecontainer;
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, obj);
+    lv_anim_set_values(&a, 10, 50);
+    lv_anim_set_duration(&a, 1000);
+    lv_anim_set_repeat_count(&a, 0);
+    lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+    lv_anim_set_exec_cb(&a, anim_x_cb);
+    lv_anim_set_values(&a, -20, 0);
+    lv_anim_start(&a);
+}
+
+/**
+ * Create a playback animation
+ */
+void anim_y(void)
+{
+    lv_obj_t * obj = ui_diecontainer;
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, obj);
+    lv_anim_set_values(&a, 10, 50);
+    lv_anim_set_duration(&a, 1000);
+    lv_anim_set_repeat_count(&a, 0);
+    lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+    lv_anim_set_exec_cb(&a, anim_y_cb);
+    lv_anim_set_values(&a, 20, 0);
+    lv_anim_start(&a);
+}
+
+void anim_callback_set_image_frame(lv_anim_t* a, int32_t v)
+{
+    int newV;
+    ui_anim_user_data_t *usr = (ui_anim_user_data_t *)a->user_data;
+    int lastIndex = usr->imgset_size - 1;
+    int map[] = {128, 256};
+    newV = v;
+    usr->val = v;
+    if ( v<0 ) {
+      v=0;
+    }
+    newV = v >= 20 ? lastIndex : v % lastIndex;
+    lv_image_set_src(usr->target, usr->imgset[newV]);
+}
+
+lv_anim_t * rollany_Animation( lv_obj_t *TargetObject, lv_image_dsc_t **imgSet ,int delay)
+{
+lv_anim_t *out_anim;
+anim_user_data_t *PropertyAnimation_0_user_data = (anim_user_data_t *)lv_malloc(sizeof(anim_user_data_t));
+PropertyAnimation_0_user_data->target = TargetObject;
+PropertyAnimation_0_user_data->imgset = imgSet;
+PropertyAnimation_0_user_data->imgset_size = sizeof(ui_imgset_roll_6_frame__)/(sizeof(lv_image_dsc_t*));
+PropertyAnimation_0_user_data->val = -1;
+lv_anim_t PropertyAnimation_0;
+lv_anim_init(&PropertyAnimation_0);
+lv_anim_set_duration(&PropertyAnimation_0, 1000);
+lv_anim_set_user_data(&PropertyAnimation_0, PropertyAnimation_0_user_data);
+lv_anim_set_custom_exec_cb(&PropertyAnimation_0, anim_callback_set_image_frame );
+lv_anim_set_values(&PropertyAnimation_0, 0, 21 );
+lv_anim_set_path_cb( &PropertyAnimation_0, lv_anim_path_linear);
+lv_anim_set_delay( &PropertyAnimation_0, delay + 0 );
+lv_anim_set_deleted_cb( &PropertyAnimation_0, _ui_anim_callback_free_user_data );
+lv_anim_set_reverse_duration(&PropertyAnimation_0, 0);
+lv_anim_set_reverse_delay(&PropertyAnimation_0, 0);
+ lv_anim_set_repeat_count(&PropertyAnimation_0, 0);
+lv_anim_set_repeat_delay(&PropertyAnimation_0, 0);
+lv_anim_set_early_apply( &PropertyAnimation_0, false );
+ lv_anim_set_get_value_cb(&PropertyAnimation_0, &_ui_anim_callback_get_image_frame );
+out_anim = lv_anim_start(&PropertyAnimation_0);
+
+return out_anim;
+}
+
+lv_anim_t *activeDieAnimation;
+lv_anim_t *activeDieInvAnimation;
+
+
+void rollGifs(int location) {
+  if (activeDieAnimation) {
+    lv_anim_del_all();
+  }
+
+
+  int coords[] = {0,88, 88, 0, 0, -88, -88, 0};
+  int width= 91;
+  int height = 29;
+
+  lv_image_set_src(ui_Image21, &ui_img_roll_6_frame_0_png);
+  lv_image_set_src(ui_Image22, &ui_img_roll_6_inv_frame_0_png);
+
+  int random_num_i = random(0, 6);
+  int random_num_j = random(0, 6);;
+  lv_obj_add_flag(ui_diecontainer, LV_OBJ_FLAG_HIDDEN);
+  if (location % 2) {
+    lv_obj_set_flex_flow(ui_diecontainer, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_width(ui_diecontainer, height);
+    lv_obj_set_height(ui_diecontainer, width);
+
+  } else {
+    lv_obj_set_flex_flow(ui_diecontainer, LV_FLEX_FLOW_ROW);
+    lv_obj_set_width(ui_diecontainer, width);
+    lv_obj_set_height(ui_diecontainer, height);
+  }
+
+  lv_obj_set_x(ui_diecontainer,coords[location * 2]);
+  lv_obj_set_y(ui_diecontainer,coords[location * 2 + 1]);
+
+
+  if (location % 2) {
+    anim_y();
+  } else {
+    anim_x();
+  }
+  activeDieAnimation = rollany_Animation(ui_Image21,(lv_image_dsc_t **)allRolls[random_num_i],0);
+  activeDieInvAnimation = rollany_Animation(ui_Image22,(lv_image_dsc_t **)allRollsInv[random_num_j],100);
+  lv_obj_remove_flag(ui_diecontainer, LV_OBJ_FLAG_HIDDEN);
+}
 
 void resetModalStepHistory() {
   size_t length = sizeof(modalStepVisited) / sizeof(modalStepVisited[0]);
@@ -294,8 +468,13 @@ bool isUpgradedMangan(int hanIndex, int fuIndex) {
   return (hanIndex == 3 && fuIndex >= 3 ) || (hanIndex == 2 && fuIndex >= 6);
 }
 
-int getRonScore(int hanIndex, int fuIndex) {
-  int multiplier = !rotationIndex ? 6 : 4;
+bool isDealer(int index) {
+
+  return index == (seatRotationNum & 3);
+}
+
+int getHandScore(int hanIndex, int fuIndex) {
+  int multiplier = isDealer(rotationIndex) ? 6 : 4;
   if (hanIndex >= 4) {
     return multiplier * hanBase[hanIndex]; 
   } else if (isUpgradedMangan(hanIndex, fuIndex)){
@@ -312,17 +491,18 @@ int roundScore(int score) {
 }
 
 void applyTsumoOffsets(int playerId, int dealerScore, int nonDealerScore ) {
+  int doraScore = lv_subject_get_int(&doracount_subject) * 1000;
   for (int i = 0; i < 4; i++) {
     if (playerId == i) {
-      scoreOffsets[i] = dealerScore + nonDealerScore * 2;
+      scoreOffsets[i] = doraScore + dealerScore + nonDealerScore * 2;
     } else {
-      scoreOffsets[i] = (!i) ? -dealerScore : -nonDealerScore; 
+      scoreOffsets[i] = ((isDealer(i)) ? -dealerScore : -nonDealerScore); 
     }
   }
 }
 
 void setupStepValues(int step) {
-  if (step == 0) {
+  if (step < 4 && step >= 0) {
     lv_subject_copy_string(&modal_title_subject, discarders[rotationIndex]);
   } else if (step >= TENPAISTATUSMODAL_INDEX && step < TENPAISTATUSMODAL_INDEX + 4) {
     lv_subject_copy_string(&modal_title_subject, "DRAW");
@@ -331,7 +511,7 @@ void setupStepValues(int step) {
   }
   else if (step == 4) {
     lv_subject_copy_string(&modal_title_subject, "RESULTS");
-    if (winType == 2) {
+    if (winType == WT_DRAW) {
       lv_obj_add_flag(ui_handscore, LV_OBJ_FLAG_HIDDEN);
     } else if (hanIndex >= 4) {
       lv_obj_remove_flag(ui_scoredescription, LV_OBJ_FLAG_HIDDEN);
@@ -343,47 +523,47 @@ void setupStepValues(int step) {
     }
     lv_label_set_text(ui_handetails, validHan[hanIndex]);
 
-    if (rotationIndex && winType == 1) {
+    if (!isDealer(rotationIndex) && winType == WT_TSUMO) {
       lv_obj_remove_flag(ui_auxpayerdetail, LV_OBJ_FLAG_HIDDEN);
     } else {
       lv_obj_add_flag(ui_auxpayerdetail, LV_OBJ_FLAG_HIDDEN);
     }
-    int score = getRonScore(hanIndex,fuIndex);
-    if (!winType) {
+    int score = getHandScore(hanIndex,fuIndex);
+    int doraScore = lv_subject_get_int(&doracount_subject) * 1000;
+    int honbaScore = lv_subject_get_int(&honbacount_subject) * 300;
+    int indivHonbaScore = honbaScore / 3;
+    if (winType == WT_RON) {
       // RON
       char payerScore[100];
-      int payerScoreNum = roundScore(score);
+      int payerScoreNum = roundScore(score) + honbaScore;
       sprintf(payerScore, "%d", payerScoreNum);
-      scoreOffsets[rotationIndex] = payerScoreNum;
+      scoreOffsets[rotationIndex] = payerScoreNum + doraScore;
       scoreOffsets[discarderIndex] = -payerScoreNum;
       lv_label_set_text(ui_payernamedetail, discarders[discarderIndex]);
       lv_label_set_text(ui_payerscoredetail, payerScore);
-    } else if (winType == 1 && !rotationIndex) {
+    } else if (winType == WT_TSUMO && isDealer(rotationIndex)) {
       // DEALER TSUMO
       char payerScore[100];
-      int payerScoreNum = roundScore(score/3);
-      int winnerScoreNum = payerScoreNum * 3;
+      int payerScoreNum = roundScore(score/3) + indivHonbaScore;
       applyTsumoOffsets(rotationIndex, payerScoreNum, payerScoreNum);
-      sprintf(payerScore, "%d", roundScore(score/3));
+      sprintf(payerScore, "%d", payerScoreNum);
       lv_label_set_text(ui_payernamedetail, "ALL");
       lv_label_set_text(ui_payerscoredetail, payerScore);
 
-    } else if (winType == 1 && rotationIndex) {
+    } else if (winType == WT_TSUMO && !isDealer(rotationIndex)) {
       char dealerScore[100];
       char nonDealerScore[100];
-      int nonDealerScoreNum = roundScore(score/4);
-      int dealerScoreNum = roundScore(score/2);
-      int winnerScoreNum = nonDealerScoreNum * 2 + dealerScoreNum;
+      int nonDealerScoreNum = roundScore(score/4) + indivHonbaScore;
+      int dealerScoreNum = roundScore(score/2) + indivHonbaScore;
       applyTsumoOffsets(rotationIndex, dealerScoreNum, nonDealerScoreNum);
       sprintf(dealerScore, "%d", dealerScoreNum);
       sprintf(nonDealerScore, "%d", nonDealerScoreNum);
-
       // NON-DEALER TSUMO
       lv_label_set_text(ui_payernamedetail, "DEALER");
       lv_label_set_text(ui_auxpayernamedetail, "NON-DEALER");
       lv_label_set_text(ui_payerscoredetail, dealerScore);
       lv_label_set_text(ui_auxpayerscoredetail, nonDealerScore);
-    } else if (winType == 2) {
+    } else if (winType == WT_DRAW) {
       // DRAW
       int negPayments[] = {0, -1000, -1500, -3000, 0};
       int posPayments[] = {0, 3000, 1500, 1000, 0};
@@ -482,17 +662,17 @@ lv_obj_t * getModalStepContent(int index) {
 void handleModalStep1(int button) {
   switch(button) {
     case 0:
-      winType = 2;
+      winType = WT_DRAW;
       transitionToStep(TENPAISTATUSMODAL_INDEX);
       break;
     case 1:
       // Ron
-      winType = 0;
+      winType = WT_RON;
       transitionToStep(1);
       break;
     case 2:
       // Tsumo
-      winType = 1;
+      winType = WT_TSUMO;
       transitionToStep(1);
       break;
     case 3:
@@ -589,8 +769,10 @@ void handleModalStep4(int button) {
 
 void applyPlayerOffsets() {
   for (int i=0; i< 4; i++) {
-    lv_subject_set_int(subject_scores[i], lv_subject_get_int(subject_scores[i]) + scoreOffsets[i]);
+    int newScore = lv_subject_get_int(subject_scores[i]) + scoreOffsets[i];
+    lv_subject_set_int(subject_scores[i], newScore);
     scoreOffsets[i] = 0;
+    _scores[i] = newScore;
   }
   repaintPlayers();
 }
@@ -640,8 +822,9 @@ void handleModalStep5(int button) {
 
     switch(button) {
     case 0:
-      transitionToStep(-1);
+      incrementRound();
       applyPlayerOffsets();
+      transitionToStep(-1);
       break;
     case 1:
       break;
@@ -675,30 +858,9 @@ void handleButton(int button) {
   int offsetButton = (button + 4 - rotationIndex) & 3;
   if (modalContentStep >=0 && modalContentStep< HANDLERS_ARR_SIZE) {
     modalHandlers[modalContentStep](offsetButton);
+  } else {
+    rollGifs(button);
   }
-  // switch (modalContentStep) {
-  //   case -1:
-  //     break;
-  //   case 0: 
-  //     handleModalStep1(offsetButton);
-  //     break;
-  //   case 1: 
-  //     handleModalStep2(offsetButton);
-  //     break;
-  //   case 2: 
-  //     handleModalStep3(offsetButton);
-  //     break;
-  //   case 3: 
-  //     handleModalStep4(offsetButton);
-  //     break;
-  //   case 4: 
-  //     handleModalStep5(offsetButton);
-  //     break;
-  //   default:
-  //     break;
-  // }
-
-
 }
 
 
@@ -718,17 +880,21 @@ lv_obj_t * getPlayerComponent(int i) {
 }
 
 void clearPlayerOffsets() {
-  applyTsumoOffsets(0,0,0);
+  for (int i = 0; i < 4; i++) {
+    scoreOffsets[i] = 0;
+  }
   repaintPlayers();
 }
 
 // assign offset scores, score are counter clockwise from winner
 void repaintPlayers() {
   lv_obj_t * cui_player;
+  lv_obj_t * cui_offset_score_container;
   lv_obj_t * cui_offset_score;
 
   for (int i=0; i<4;i++){
     cui_player = getPlayerComponent(i);
+    cui_offset_score_container = ui_comp_get_child(cui_player, UI_COMP_PLAYER_PANEL30);
     cui_offset_score = ui_comp_get_child(cui_player, UI_COMP_PLAYER_PANEL30_OFFSETSCORE);
 
     if (scoreOffsets[i]) {
@@ -736,23 +902,24 @@ void repaintPlayers() {
       // Concatenate safely
       snprintf(result, sizeof(result), "%+d", scoreOffsets[i]);      
       lv_label_set_text(cui_offset_score, result);
-      lv_obj_remove_flag(cui_offset_score, LV_OBJ_FLAG_HIDDEN);
+      lv_obj_remove_flag(cui_offset_score_container, LV_OBJ_FLAG_HIDDEN);
     } else {
-      lv_obj_add_flag(cui_offset_score, LV_OBJ_FLAG_HIDDEN);
+      lv_obj_add_flag(cui_offset_score_container, LV_OBJ_FLAG_HIDDEN);
     }
   }
 }
 
+void resetPlayerTenpaiFlags() {
+  for (int i = 0; i<4; i++) {
+    playerTenpaiFlags[i] = false;
+  }
+}
 
 void resetModalLabels() {
   modalContentStep = 0;
   hanIndex = 0;
   fuIndex = 2;
   discarderIndex = 0;
-  tenpaiStep = 0;
-  for (int i = 0; i<4; i++) {
-    playerTenpaiFlags[i] = false;
-  }
   lv_label_set_text(ui_fucount, validFu[fuIndex]);
   lv_label_set_text(ui_hancount, validHan[hanIndex]);
   lv_label_set_text(ui_discarder, discarders[(rotationIndex+1)&3]);
@@ -766,12 +933,16 @@ void setModalVisibility(bool visible) {
     }
     resetModalLabels();
     lv_obj_add_flag(ui_roundpane, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_diecontainer, LV_OBJ_FLAG_HIDDEN);
+
     lv_obj_remove_flag(ui_modalcontainer, LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_flag(getModalStepContent(0), LV_OBJ_FLAG_HIDDEN);
   } else {
     lv_obj_add_flag(ui_modalcontainer, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(getModalStepContent(modalContentStep), LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_flag(ui_roundpane, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_remove_flag(ui_diecontainer, LV_OBJ_FLAG_HIDDEN);
+    rotationIndex = -1;
     modalContentStep = -1;
   }
 }
@@ -814,8 +985,6 @@ void Codec_LoopTask(void *arg) {
     }
   }
 }
-static int carryoverDora = 0;
-static int currentDoraCount = 0;
 
 void screen1TimeoutTask() {
   // sensor id -> user
@@ -823,22 +992,19 @@ void screen1TimeoutTask() {
   int riichi_count = 0; 
   for (int i=0; i<4;i++) {
       lv_obj_t * riichi_icon;
-      riichi_icon = ui_comp_get_child(getPlayerComponent(sensorMap[i]), UI_COMP_PLAYER_PANEL9_RIICHI);
+      riichi_icon = ui_comp_get_child(getPlayerComponent(sensorMap[i]), UI_COMP_PLAYER_CONTAINER_DOT);
       if (!lv_obj_has_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN) && currentStateArr[i] != STATE_STABLE_COVERED ) {
         lv_obj_add_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN);
-
+        lv_subject_set_int(subject_scores[sensorMap[i]], _scores[sensorMap[i]]);
       } else if (lv_obj_has_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN)&& currentStateArr[i] == STATE_STABLE_COVERED ) {
         lv_obj_remove_flag(riichi_icon, LV_OBJ_FLAG_HIDDEN);
+        lv_subject_set_int(subject_scores[sensorMap[i]], -1000 + _scores[sensorMap[i]]);
       }
     riichi_count += (currentStateArr[i] == STATE_STABLE_COVERED) ? 1 : 0;
   }
   if (currentDoraCount != riichi_count) {
-    // "Player" (6) + Number (1) + Null terminator (1) = 8 bytes needed
-    char result[3]; 
-    // Concatenate safely
-    snprintf(result, sizeof(result), "%d", riichi_count+ carryoverDora);
     currentDoraCount = riichi_count;
-    lv_label_set_text(ui_doracount, result);
+    lv_subject_set_int(&doracount_subject, riichi_count + carryoverDora);
   }
   
 
@@ -1083,13 +1249,42 @@ void setupTimers() {
   // lv_anim_start(&a);
 }
 
-void incrementRound(bool changeWinds, bool resetHonba) {
-  if (changeWinds) {
-    
-  }
-  if (resetHonba) {
 
+const lv_image_dsc_t* roundNumImgs[] ={&ui_img_1193668880, &ui_img_641408904, &ui_img_2052151144, &ui_img_1690547480};
+const lv_image_dsc_t* playerWindsImgs[] ={&ui_img_toncb_png, &ui_img_nancb_png, &ui_img_shack_png, &ui_img_peicb_png};
+
+void setPlayerWindImgs() {
+    for (int i = 0; i < 4; i++) {
+      lv_image_set_src(ui_comp_get_child(getPlayerComponent((seatRotationNum + i) & 3), UI_COMP_PLAYER_WINDIMG), playerWindsImgs[i]);
   }
+}
+
+void incrementRound() {
+  if (winType == WT_NONE) {
+    Serial.println("Somehow incremented round without ending it?");
+    return;
+  }
+  int dealerIndex = seatRotationNum & 3;
+
+  bool changeWinds = (rotationIndex != dealerIndex && winType != WT_DRAW) || (winType == WT_DRAW && !playerTenpaiFlags[dealerIndex]);
+  bool resetHonba = changeWinds && winType != WT_DRAW;
+  seatRotationNum += changeWinds ? 1 : 0;
+  honbaCount = resetHonba ? 0 : (honbaCount + 1);
+  setPlayerWindImgs();
+  if (winType == WT_TSUMO || winType == WT_RON) {
+    carryoverDora = 0;
+    currentDoraCount = 0;
+  }
+  else {
+    carryoverDora += currentDoraCount;
+    currentDoraCount = 0;
+  }
+  if (changeWinds) {
+    lv_image_set_src(ui_centerroundnum, roundNumImgs[seatRotationNum & 3]);
+    lv_image_set_src(ui_centerroundwind, !((seatRotationNum>>2)&1) ? &ui_img_587546794 : &ui_img_centernan_png);
+  }
+  lv_subject_set_int(&honbacount_subject, honbaCount);
+  lv_subject_set_int(&doracount_subject, carryoverDora);
 
 }
 
@@ -1100,7 +1295,7 @@ void setup()
   Serial.begin(115200);
   Serial.println("Hello world");
   delay(300);
-
+  randomSeed(analogRead(0));
 
    RlcdPort.RLCD_Init();
 
@@ -1109,6 +1304,7 @@ void setup()
    if (Lvgl_lock(-1)) {
     ui_init();
     setupModalContentArr();
+    setPlayerWindImgs();
     setupObservers();
     setupTimers();
     repaintPlayers();

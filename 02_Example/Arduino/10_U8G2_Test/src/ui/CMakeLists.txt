@@ -9,6 +9,15 @@ SET(SOURCES ui_comp_bar.c
     ui.c
     ui_comp_hook.c
     ui_helpers.c
+    ui_img_1492340486.c
+    ui_img_310357668.c
+    ui_img_218071640.c
+    ui_img_1264610442.c
+    ui_img_toncb_png.c
+    ui_img_1685014530.c
+    ui_img_810505301.c
+    ui_img_587546794.c
+    ui_img_1193668880.c
     ui_img_buttoncorner6x6tl_png.c
     ui_img_buttoncorner6x6tr_png.c
     ui_img_buttoncorner6x6_png.c
@@ -16,7 +25,46 @@ SET(SOURCES ui_comp_bar.c
     ui_img_leftarrow_png.c
     ui_img_rightarrow_png.c
     ui_img_rightarrow_invert_png.c
+    ui_img_roll_5_frame_7_png.c
+    ui_img_836160992.c
+    ui_img_1801741918.c
+    ui_img_641408904.c
+    ui_img_2052151144.c
+    ui_img_1690547480.c
+    ui_img_1512043842.c
+    ui_img_buttoncorner_png.c
+    ui_img_centernan_png.c
+    ui_img_roll_1_frame_7_png.c
+    ui_img_roll_1_inv_frame_7_png.c
+    ui_img_roll_2_frame_7_png.c
+    ui_img_roll_2_inv_frame_7_png.c
+    ui_img_roll_3_frame_7_png.c
+    ui_img_roll_3_inv_frame_7_png.c
+    ui_img_roll_4_frame_7_png.c
+    ui_img_roll_4_inv_frame_7_png.c
+    ui_img_roll_5_inv_frame_7_png.c
+    ui_img_roll_6_frame_0_png.c
+    ui_img_roll_6_frame_1_png.c
+    ui_img_roll_6_frame_2_png.c
+    ui_img_roll_6_frame_3_png.c
+    ui_img_roll_6_frame_8_png.c
+    ui_img_roll_6_inv_frame_0_png.c
+    ui_img_roll_6_inv_frame_1_png.c
+    ui_img_roll_6_inv_frame_2_png.c
+    ui_img_roll_6_inv_frame_3_png.c
+    ui_img_roll_6_inv_frame_8_png.c
+    ui_img_nancb_png.c
+    ui_img_peicb_png.c
+    ui_img_shack_png.c
+    ui_img_score_bigger_png.c
     fonts/ui_font_windylg.c
-    fonts/ui_font_windymed.c)
+    fonts/ui_font_windymed.c
+    fonts/ui_font_windymedxlg.c
+    fonts/ui_font_windymx.c
+    fonts/ui_font_windysm.c
+    fonts/ui_font_windysmm.c
+    fonts/ui_font_segment20.c
+    fonts/ui_font_segment12.c
+    fonts/ui_font_windy18.c)
 
 add_library(ui ${SOURCES})
