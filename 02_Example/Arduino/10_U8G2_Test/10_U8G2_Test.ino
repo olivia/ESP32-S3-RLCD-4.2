@@ -474,6 +474,8 @@ void rollGifs(int location) {
     lv_obj_set_flex_flow(ui_diecontainer, LV_FLEX_FLOW_ROW);
     lv_obj_set_width(ui_diecontainer, width);
     lv_obj_set_height(ui_diecontainer, height);
+    lv_obj_set_y(ui_statusicons, location == 0 ? -88 : 88);
+
   }
 
   lv_obj_set_x(ui_diecontainer,coords[location * 2]);
@@ -981,6 +983,7 @@ void setModalVisibility(bool visible) {
     resetModalLabels();
     lv_obj_add_flag(ui_roundpane, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(ui_diecontainer, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_statusicons, LV_OBJ_FLAG_HIDDEN);
 
     lv_obj_remove_flag(ui_modalcontainer, LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_flag(getModalStepContent(0), LV_OBJ_FLAG_HIDDEN);
@@ -989,6 +992,7 @@ void setModalVisibility(bool visible) {
     lv_obj_add_flag(getModalStepContent(modalContentStep), LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_flag(ui_roundpane, LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_flag(ui_diecontainer, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_remove_flag(ui_statusicons, LV_OBJ_FLAG_HIDDEN);
     rotationIndex = -1;
     modalContentStep = -1;
   }

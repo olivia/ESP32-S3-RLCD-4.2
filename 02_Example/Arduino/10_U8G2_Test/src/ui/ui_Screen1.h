@@ -179,6 +179,7 @@ extern lv_obj_t *ui_modaltitle;
 extern lv_obj_t *ui_diecontainer;
 extern lv_obj_t *ui_Image21;
 extern lv_obj_t *ui_Image22;
+extern lv_obj_t *ui_statusicons;
 extern lv_obj_t *ui_speakericon;
 extern lv_obj_t *ui_batteryicon;
 // CUSTOM VARIABLES
