@@ -6,7 +6,7 @@
 #include "ui.h"
 
 lv_obj_t *uic_modalplayer;
-lv_obj_t *ui_Screen1 = NULL;lv_obj_t *ui_player1 = NULL;lv_obj_t *ui_player2 = NULL;lv_obj_t *ui_player3 = NULL;lv_obj_t *ui_player4 = NULL;lv_obj_t *ui_roundpane = NULL;lv_obj_t *ui_Panel7 = NULL;lv_obj_t *ui_roundwind = NULL;lv_obj_t *ui_roundnum = NULL;lv_obj_t *ui_Panel6 = NULL;lv_obj_t *ui_honbacount = NULL;lv_obj_t *ui_doracount = NULL;lv_obj_t *ui_centerroundwind = NULL;lv_obj_t *ui_centerroundnum = NULL;lv_obj_t *ui_modalcontainer = NULL;lv_obj_t *ui_modal = NULL;lv_obj_t *ui_modalcontent = NULL;lv_obj_t *ui_win1 = NULL;lv_obj_t *ui_Panel14 = NULL;lv_obj_t *ui_Panel15 = NULL;lv_obj_t *ui_Button4 = NULL;lv_obj_t *ui_Label14 = NULL;lv_obj_t *ui_blicon4 = NULL;lv_obj_t *ui_blimg4 = NULL;lv_obj_t *ui_Panel16 = NULL;lv_obj_t *ui_Button6 = NULL;lv_obj_t *ui_Label16 = NULL;lv_obj_t *ui_blicon5 = NULL;lv_obj_t *ui_blimg5 = NULL;lv_obj_t *ui_Panel3 = NULL;lv_obj_t *ui_cancel = NULL;lv_obj_t *ui_bricon1 = NULL;lv_obj_t *ui_Image1 = NULL;lv_obj_t *ui_Label6 = NULL;lv_obj_t *ui_draw = NULL;lv_obj_t *ui_Label7 = NULL;lv_obj_t *ui_bricon4 = NULL;lv_obj_t *ui_Image5 = NULL;lv_obj_t *ui_win2 = NULL;lv_obj_t *ui_Panel10 = NULL;lv_obj_t *ui_Panel13 = NULL;lv_obj_t *ui_Panel11 = NULL;lv_obj_t *ui_Button3 = NULL;lv_obj_t *ui_Label8 = NULL;lv_obj_t *ui_blicon2 = NULL;lv_obj_t *ui_blimg2 = NULL;lv_obj_t *ui_hancount = NULL;lv_obj_t *ui_Panel12 = NULL;lv_obj_t *ui_Button5 = NULL;lv_obj_t *ui_Label13 = NULL;lv_obj_t *ui_blicon3 = NULL;lv_obj_t *ui_blimg3 = NULL;lv_obj_t *ui_Label9 = NULL;lv_obj_t *ui_Panel4 = NULL;lv_obj_t *ui_prev = NULL;lv_obj_t *ui_bricon3 = NULL;lv_obj_t *ui_Image4 = NULL;lv_obj_t *ui_Label10 = NULL;lv_obj_t *ui_draw1 = NULL;lv_obj_t *ui_Label11 = NULL;lv_obj_t *ui_bricon5 = NULL;lv_obj_t *ui_Image6 = NULL;lv_obj_t *ui_win3 = NULL;lv_obj_t *ui_Panel17 = NULL;lv_obj_t *ui_Panel18 = NULL;lv_obj_t *ui_Panel19 = NULL;lv_obj_t *ui_Button7 = NULL;lv_obj_t *ui_Label15 = NULL;lv_obj_t *ui_blicon6 = NULL;lv_obj_t *ui_blimg6 = NULL;lv_obj_t *ui_fucount = NULL;lv_obj_t *ui_Panel20 = NULL;lv_obj_t *ui_Button8 = NULL;lv_obj_t *ui_Label18 = NULL;lv_obj_t *ui_blicon7 = NULL;lv_obj_t *ui_blimg7 = NULL;lv_obj_t *ui_Label19 = NULL;lv_obj_t *ui_Panel21 = NULL;lv_obj_t *ui_prev1 = NULL;lv_obj_t *ui_bricon2 = NULL;lv_obj_t *ui_Image2 = NULL;lv_obj_t *ui_Label20 = NULL;lv_obj_t *ui_draw2 = NULL;lv_obj_t *ui_Label21 = NULL;lv_obj_t *ui_bricon6 = NULL;lv_obj_t *ui_Image7 = NULL;lv_obj_t *ui_win4 = NULL;lv_obj_t *ui_Panel22 = NULL;lv_obj_t *ui_Panel23 = NULL;lv_obj_t *ui_Panel24 = NULL;lv_obj_t *ui_Button1 = NULL;lv_obj_t *ui_Image10 = NULL;lv_obj_t *ui_blicon1 = NULL;lv_obj_t *ui_blimg1 = NULL;lv_obj_t *ui_discarder = NULL;lv_obj_t *ui_Panel25 = NULL;lv_obj_t *ui_Button2 = NULL;lv_obj_t *ui_Image9 = NULL;lv_obj_t *ui_blicon8 = NULL;lv_obj_t *ui_blimg8 = NULL;lv_obj_t *ui_Label23 = NULL;lv_obj_t *ui_Panel26 = NULL;lv_obj_t *ui_prev2 = NULL;lv_obj_t *ui_bricon7 = NULL;lv_obj_t *ui_Image3 = NULL;lv_obj_t *ui_Label24 = NULL;lv_obj_t *ui_draw3 = NULL;lv_obj_t *ui_Label25 = NULL;lv_obj_t *ui_bricon8 = NULL;lv_obj_t *ui_Image8 = NULL;lv_obj_t *ui_selectoptioncontent = NULL;lv_obj_t *ui_Panel1 = NULL;lv_obj_t *ui_Panel29 = NULL;lv_obj_t *ui_Panel32 = NULL;lv_obj_t *ui_Button9 = NULL;lv_obj_t *ui_Image11 = NULL;lv_obj_t *ui_blicon9 = NULL;lv_obj_t *ui_blimg9 = NULL;lv_obj_t *ui_selectoption = NULL;lv_obj_t *ui_Panel33 = NULL;lv_obj_t *ui_Button10 = NULL;lv_obj_t *ui_Image16 = NULL;lv_obj_t *ui_blicon10 = NULL;lv_obj_t *ui_blimg10 = NULL;lv_obj_t *ui_optiondescription = NULL;lv_obj_t *ui_Panel34 = NULL;lv_obj_t *ui_prev4 = NULL;lv_obj_t *ui_bricon11 = NULL;lv_obj_t *ui_Image17 = NULL;lv_obj_t *ui_bllabel = NULL;lv_obj_t *ui_draw5 = NULL;lv_obj_t *ui_brlabel = NULL;lv_obj_t *ui_bricon12 = NULL;lv_obj_t *ui_Image18 = NULL;lv_obj_t *ui_win5 = NULL;lv_obj_t *ui_scoredescription = NULL;lv_obj_t *ui_handscore = NULL;lv_obj_t *ui_handetails = NULL;lv_obj_t *ui_Label28 = NULL;lv_obj_t *ui_fucontainerdetail = NULL;lv_obj_t *ui_funumdetail = NULL;lv_obj_t *ui_Label30 = NULL;lv_obj_t *ui_playerscoredetail = NULL;lv_obj_t *ui_payerdetail = NULL;lv_obj_t *ui_payernamedetail = NULL;lv_obj_t *ui_Image12 = NULL;lv_obj_t *ui_payerscoredetail = NULL;lv_obj_t *ui_auxpayerdetail = NULL;lv_obj_t *ui_auxpayernamedetail = NULL;lv_obj_t *ui_Image15 = NULL;lv_obj_t *ui_auxpayerscoredetail = NULL;lv_obj_t *ui_Panel31 = NULL;lv_obj_t *ui_prev3 = NULL;lv_obj_t *ui_bricon9 = NULL;lv_obj_t *ui_Image13 = NULL;lv_obj_t *ui_Label26 = NULL;lv_obj_t *ui_draw4 = NULL;lv_obj_t *ui_Label27 = NULL;lv_obj_t *ui_bricon10 = NULL;lv_obj_t *ui_Image14 = NULL;lv_obj_t *ui_Panel5 = NULL;lv_obj_t *ui_modaltitle = NULL;lv_obj_t *ui_diecontainer = NULL;lv_obj_t *ui_Image21 = NULL;lv_obj_t *ui_Image22 = NULL;
+lv_obj_t *ui_Screen1 = NULL;lv_obj_t *ui_player1 = NULL;lv_obj_t *ui_player2 = NULL;lv_obj_t *ui_player3 = NULL;lv_obj_t *ui_player4 = NULL;lv_obj_t *ui_roundpane = NULL;lv_obj_t *ui_Panel7 = NULL;lv_obj_t *ui_roundwind = NULL;lv_obj_t *ui_roundnum = NULL;lv_obj_t *ui_Panel6 = NULL;lv_obj_t *ui_honbacount = NULL;lv_obj_t *ui_doracount = NULL;lv_obj_t *ui_centerroundwind = NULL;lv_obj_t *ui_centerroundnum = NULL;lv_obj_t *ui_modalcontainer = NULL;lv_obj_t *ui_modal = NULL;lv_obj_t *ui_modalcontent = NULL;lv_obj_t *ui_win1 = NULL;lv_obj_t *ui_Panel14 = NULL;lv_obj_t *ui_Panel15 = NULL;lv_obj_t *ui_Button4 = NULL;lv_obj_t *ui_Label14 = NULL;lv_obj_t *ui_blicon4 = NULL;lv_obj_t *ui_blimg4 = NULL;lv_obj_t *ui_Panel16 = NULL;lv_obj_t *ui_Button6 = NULL;lv_obj_t *ui_Label16 = NULL;lv_obj_t *ui_blicon5 = NULL;lv_obj_t *ui_blimg5 = NULL;lv_obj_t *ui_Panel3 = NULL;lv_obj_t *ui_cancel = NULL;lv_obj_t *ui_bricon1 = NULL;lv_obj_t *ui_Image1 = NULL;lv_obj_t *ui_Label6 = NULL;lv_obj_t *ui_draw = NULL;lv_obj_t *ui_Label7 = NULL;lv_obj_t *ui_bricon4 = NULL;lv_obj_t *ui_Image5 = NULL;lv_obj_t *ui_win2 = NULL;lv_obj_t *ui_Panel10 = NULL;lv_obj_t *ui_Panel13 = NULL;lv_obj_t *ui_Panel11 = NULL;lv_obj_t *ui_Button3 = NULL;lv_obj_t *ui_Label8 = NULL;lv_obj_t *ui_blicon2 = NULL;lv_obj_t *ui_blimg2 = NULL;lv_obj_t *ui_hancount = NULL;lv_obj_t *ui_Panel12 = NULL;lv_obj_t *ui_Button5 = NULL;lv_obj_t *ui_Label13 = NULL;lv_obj_t *ui_blicon3 = NULL;lv_obj_t *ui_blimg3 = NULL;lv_obj_t *ui_Label9 = NULL;lv_obj_t *ui_Panel4 = NULL;lv_obj_t *ui_prev = NULL;lv_obj_t *ui_bricon3 = NULL;lv_obj_t *ui_Image4 = NULL;lv_obj_t *ui_Label10 = NULL;lv_obj_t *ui_draw1 = NULL;lv_obj_t *ui_Label11 = NULL;lv_obj_t *ui_bricon5 = NULL;lv_obj_t *ui_Image6 = NULL;lv_obj_t *ui_win3 = NULL;lv_obj_t *ui_Panel17 = NULL;lv_obj_t *ui_Panel18 = NULL;lv_obj_t *ui_Panel19 = NULL;lv_obj_t *ui_Button7 = NULL;lv_obj_t *ui_Label15 = NULL;lv_obj_t *ui_blicon6 = NULL;lv_obj_t *ui_blimg6 = NULL;lv_obj_t *ui_fucount = NULL;lv_obj_t *ui_Panel20 = NULL;lv_obj_t *ui_Button8 = NULL;lv_obj_t *ui_Label18 = NULL;lv_obj_t *ui_blicon7 = NULL;lv_obj_t *ui_blimg7 = NULL;lv_obj_t *ui_Label19 = NULL;lv_obj_t *ui_Panel21 = NULL;lv_obj_t *ui_prev1 = NULL;lv_obj_t *ui_bricon2 = NULL;lv_obj_t *ui_Image2 = NULL;lv_obj_t *ui_Label20 = NULL;lv_obj_t *ui_draw2 = NULL;lv_obj_t *ui_Label21 = NULL;lv_obj_t *ui_bricon6 = NULL;lv_obj_t *ui_Image7 = NULL;lv_obj_t *ui_win4 = NULL;lv_obj_t *ui_Panel22 = NULL;lv_obj_t *ui_Panel23 = NULL;lv_obj_t *ui_Panel24 = NULL;lv_obj_t *ui_Button1 = NULL;lv_obj_t *ui_Image10 = NULL;lv_obj_t *ui_blicon1 = NULL;lv_obj_t *ui_blimg1 = NULL;lv_obj_t *ui_discarder = NULL;lv_obj_t *ui_Panel25 = NULL;lv_obj_t *ui_Button2 = NULL;lv_obj_t *ui_Image9 = NULL;lv_obj_t *ui_blicon8 = NULL;lv_obj_t *ui_blimg8 = NULL;lv_obj_t *ui_Label23 = NULL;lv_obj_t *ui_Panel26 = NULL;lv_obj_t *ui_prev2 = NULL;lv_obj_t *ui_bricon7 = NULL;lv_obj_t *ui_Image3 = NULL;lv_obj_t *ui_Label24 = NULL;lv_obj_t *ui_draw3 = NULL;lv_obj_t *ui_Label25 = NULL;lv_obj_t *ui_bricon8 = NULL;lv_obj_t *ui_Image8 = NULL;lv_obj_t *ui_selectoptioncontent = NULL;lv_obj_t *ui_Panel1 = NULL;lv_obj_t *ui_Panel29 = NULL;lv_obj_t *ui_Panel32 = NULL;lv_obj_t *ui_Button9 = NULL;lv_obj_t *ui_Image11 = NULL;lv_obj_t *ui_blicon9 = NULL;lv_obj_t *ui_blimg9 = NULL;lv_obj_t *ui_selectoption = NULL;lv_obj_t *ui_Panel33 = NULL;lv_obj_t *ui_Button10 = NULL;lv_obj_t *ui_Image16 = NULL;lv_obj_t *ui_blicon10 = NULL;lv_obj_t *ui_blimg10 = NULL;lv_obj_t *ui_optiondescription = NULL;lv_obj_t *ui_Panel34 = NULL;lv_obj_t *ui_prev4 = NULL;lv_obj_t *ui_bricon11 = NULL;lv_obj_t *ui_Image17 = NULL;lv_obj_t *ui_bllabel = NULL;lv_obj_t *ui_draw5 = NULL;lv_obj_t *ui_brlabel = NULL;lv_obj_t *ui_bricon12 = NULL;lv_obj_t *ui_Image18 = NULL;lv_obj_t *ui_win5 = NULL;lv_obj_t *ui_scoredescription = NULL;lv_obj_t *ui_handscore = NULL;lv_obj_t *ui_handetails = NULL;lv_obj_t *ui_Label28 = NULL;lv_obj_t *ui_fucontainerdetail = NULL;lv_obj_t *ui_funumdetail = NULL;lv_obj_t *ui_Label30 = NULL;lv_obj_t *ui_playerscoredetail = NULL;lv_obj_t *ui_payerdetail = NULL;lv_obj_t *ui_payernamedetail = NULL;lv_obj_t *ui_Image12 = NULL;lv_obj_t *ui_payerscoredetail = NULL;lv_obj_t *ui_auxpayerdetail = NULL;lv_obj_t *ui_auxpayernamedetail = NULL;lv_obj_t *ui_Image15 = NULL;lv_obj_t *ui_auxpayerscoredetail = NULL;lv_obj_t *ui_Panel31 = NULL;lv_obj_t *ui_prev3 = NULL;lv_obj_t *ui_bricon9 = NULL;lv_obj_t *ui_Image13 = NULL;lv_obj_t *ui_Label26 = NULL;lv_obj_t *ui_draw4 = NULL;lv_obj_t *ui_Label27 = NULL;lv_obj_t *ui_bricon10 = NULL;lv_obj_t *ui_Image14 = NULL;lv_obj_t *ui_Panel5 = NULL;lv_obj_t *ui_modaltitle = NULL;lv_obj_t *ui_diecontainer = NULL;lv_obj_t *ui_Image21 = NULL;lv_obj_t *ui_Image22 = NULL;lv_obj_t *ui_speakericon = NULL;lv_obj_t *ui_batteryicon = NULL;
 // event funtions
 void ui_event_Screen1( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
@@ -2124,6 +2124,50 @@ lv_obj_set_align( ui_Image22, LV_ALIGN_LEFT_MID );
 lv_obj_add_flag( ui_Image22, LV_OBJ_FLAG_CLICKABLE );   /// Flags
 lv_obj_remove_flag( ui_Image22, LV_OBJ_FLAG_SCROLLABLE );    /// Flags
 
+ui_speakericon = lv_label_create(ui_Screen1);
+lv_obj_set_width( ui_speakericon, 22);
+lv_obj_set_height( ui_speakericon, 22);
+lv_obj_set_x( ui_speakericon, 59 );
+lv_obj_set_y( ui_speakericon, 58 );
+lv_obj_set_align( ui_speakericon, LV_ALIGN_CENTER );
+lv_label_set_long_mode(ui_speakericon,LV_LABEL_LONG_MODE_CLIP);
+lv_label_set_text(ui_speakericon,"");
+ui_object_set_themeable_style_property(ui_speakericon, LV_PART_MAIN| LV_STATE_DEFAULT, LV_STYLE_TEXT_COLOR, _ui_theme_color_White);
+ui_object_set_themeable_style_property(ui_speakericon, LV_PART_MAIN| LV_STATE_DEFAULT, LV_STYLE_TEXT_OPA, _ui_theme_alpha_White);
+lv_obj_set_style_text_align(ui_speakericon, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_text_font(ui_speakericon, &lv_font_montserrat_14, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_radius(ui_speakericon, 4, LV_PART_MAIN| LV_STATE_DEFAULT);
+ui_object_set_themeable_style_property(ui_speakericon, LV_PART_MAIN| LV_STATE_DEFAULT, LV_STYLE_BG_COLOR, _ui_theme_color_Black);
+ui_object_set_themeable_style_property(ui_speakericon, LV_PART_MAIN| LV_STATE_DEFAULT, LV_STYLE_BG_OPA, _ui_theme_alpha_Black);
+lv_obj_set_style_border_color(ui_speakericon, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT );
+lv_obj_set_style_border_opa(ui_speakericon, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_border_width(ui_speakericon, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_pad_left(ui_speakericon, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_pad_right(ui_speakericon, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_pad_top(ui_speakericon, 3, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_pad_bottom(ui_speakericon, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
+
+ui_batteryicon = lv_label_create(ui_Screen1);
+lv_obj_set_width( ui_batteryicon, 22);
+lv_obj_set_height( ui_batteryicon, 22);
+lv_obj_set_x( ui_batteryicon, -56 );
+lv_obj_set_y( ui_batteryicon, 59 );
+lv_obj_set_align( ui_batteryicon, LV_ALIGN_CENTER );
+lv_label_set_long_mode(ui_batteryicon,LV_LABEL_LONG_MODE_CLIP);
+lv_label_set_text(ui_batteryicon,"");
+ui_object_set_themeable_style_property(ui_batteryicon, LV_PART_MAIN| LV_STATE_DEFAULT, LV_STYLE_TEXT_COLOR, _ui_theme_color_White);
+ui_object_set_themeable_style_property(ui_batteryicon, LV_PART_MAIN| LV_STATE_DEFAULT, LV_STYLE_TEXT_OPA, _ui_theme_alpha_White);
+lv_obj_set_style_text_align(ui_batteryicon, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_text_font(ui_batteryicon, &lv_font_montserrat_14, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_radius(ui_batteryicon, 4, LV_PART_MAIN| LV_STATE_DEFAULT);
+ui_object_set_themeable_style_property(ui_batteryicon, LV_PART_MAIN| LV_STATE_DEFAULT, LV_STYLE_BG_COLOR, _ui_theme_color_Black);
+ui_object_set_themeable_style_property(ui_batteryicon, LV_PART_MAIN| LV_STATE_DEFAULT, LV_STYLE_BG_OPA, _ui_theme_alpha_Black);
+lv_obj_set_style_border_width(ui_batteryicon, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_pad_left(ui_batteryicon, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_pad_right(ui_batteryicon, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_pad_top(ui_batteryicon, 3, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_pad_bottom(ui_batteryicon, 0, LV_PART_MAIN| LV_STATE_DEFAULT);
+
 lv_obj_add_event_cb(ui_Screen1, ui_event_Screen1, LV_EVENT_ALL, NULL);
 uic_modalplayer = ui_modaltitle;
 
@@ -2300,5 +2344,7 @@ ui_modaltitle= NULL;
 ui_diecontainer= NULL;
 ui_Image21= NULL;
 ui_Image22= NULL;
+ui_speakericon= NULL;
+ui_batteryicon= NULL;
 
 }

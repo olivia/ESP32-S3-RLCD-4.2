@@ -4,6 +4,10 @@
 #include "lvgl.h" 
 #include "src/ui/ui.h"
 #include "src/ui/ui_helpers.h"
+#include <Preferences.h>
+#define ADC_RESOLUTION 4095.0 // 12-bit ADC
+#define V_REF 3.3             // ESP32 internal reference voltage
+#define BATTERY_PIN 4
 
 #include "i2c_bsp.h"
 #include "codec_bsp.h"
@@ -11,6 +15,7 @@
 #include <esp_timer.h>
 #include "src/gif/Roll6.c"
 
+Preferences preferences;
 
 #define U8G2_USE_LARGE_FONTS
 #define LCD_WIDTH 400
@@ -33,7 +38,7 @@
 static lv_subject_t br_name_subject;
 static char curr_br_name_text_buffer[128];
 static char prev_br_name_text_buffer[128];
-
+static int muteVoices;
 static lv_subject_t br_wind_subject;
 static char curr_br_wind_text_buffer[128];
 static char prev_br_wind_text_buffer[128];
@@ -91,6 +96,7 @@ static lv_subject_t doracount_subject;
 static lv_subject_t * subject_scores[] = {&br_score_subject, &tr_score_subject, &tl_score_subject, &bl_score_subject}; 
 static lv_subject_t * subject_winds[] = {&br_wind_subject, &tr_wind_subject, &tl_wind_subject, &bl_wind_subject}; 
 
+static int sensorMultiplierIndex;
 
 static int rotationIndex = 0;
 static int modalContentStep = -1;
@@ -126,6 +132,7 @@ typedef enum {
   WT_NONE = -1
 } WinType_t;
 
+static float sensorMultipliers[] = {0.25,0.5,0.75,1,1.25,1.5,2,3};
 
 #define LIGHT_SENSORS_COUNT 4
 typedef enum {
@@ -207,6 +214,7 @@ int selectPins[] =
 int signalPin = 17;
 
 int n = sizeof(selectPins)/sizeof(selectPins[0]);
+int sensorMultiplierNum = sizeof(sensorMultipliers)/sizeof(sensorMultipliers[0]);
 
 // ESWN
 char* discarders[] = {"apple", "banana", "cherry", "dewberry"};
@@ -329,6 +337,33 @@ const lv_image_dsc_t **allRollsInv[] = {ui_imgset_roll_6_inv_frame__,ui_imgset_r
 
  void anim_y_cb(void * var, int32_t v) {
     lv_obj_set_y((lv_obj_t *)var, v);
+}
+
+void updateBatteryLevel(lv_timer_t * timer) {
+    
+      // Read raw ADC value from GPIO4
+    int raw_adc = analogRead(BATTERY_PIN);
+    
+    // Convert ADC to voltage measured at the pin
+    float pin_voltage = (raw_adc / ADC_RESOLUTION) * V_REF;
+    
+    // Multiply by 3 to reverse the hardware voltage divider circuit
+    float battery_voltage = pin_voltage * 3.0; 
+    
+    // Map the voltage roughly to 0-100% battery capacity
+    float percentage = ((battery_voltage - 2.5) / (4.2 - 2.5)) * 100.0;
+    if (percentage > 80) {
+        lv_label_set_text(ui_batteryicon, LV_SYMBOL_BATTERY_FULL);
+    } else if (percentage > 50) {
+        lv_label_set_text(ui_batteryicon, LV_SYMBOL_BATTERY_3);
+    } else if (percentage > 20) {
+        lv_label_set_text(ui_batteryicon, LV_SYMBOL_BATTERY_2);
+    } else if (percentage > 5) {
+        lv_label_set_text(ui_batteryicon, LV_SYMBOL_BATTERY_1);
+    } else {
+        lv_label_set_text(ui_batteryicon, LV_SYMBOL_BATTERY_EMPTY);
+    }
+
 }
 
 /**
@@ -851,15 +886,27 @@ void (*modalHandlers[])(int) = {
   handleTenpaiStatusModal
 };
 
+void updateMultiplier(int button) {
+  int newIndex = (sensorMultiplierNum + sensorMultiplierIndex + (button < 2 ? 1: -1))% sensorMultiplierNum;
+  sensorMultiplierIndex = newIndex;
+  preferences.begin("ecompass", false);
+  preferences.putInt("sensorMultiplierIndex", sensorMultiplierIndex);
+  preferences.end();
+}
+
 // 3. Automatically calculate the number of handlers
 #define HANDLERS_ARR_SIZE (sizeof(modalHandlers) / sizeof(modalHandlers[0]))
 
 void handleButton(int button) {
+  lv_obj_t * current_screen = lv_screen_active();
+
   int offsetButton = (button + 4 - rotationIndex) & 3;
-  if (modalContentStep >=0 && modalContentStep< HANDLERS_ARR_SIZE) {
+  if (current_screen == ui_Screen1 && modalContentStep >=0 && modalContentStep< HANDLERS_ARR_SIZE) {
     modalHandlers[modalContentStep](offsetButton);
-  } else {
+  } else if (current_screen == ui_Screen1) {
     rollGifs(button);
+  } else {
+    updateMultiplier(button);
   }
 }
 
@@ -986,7 +1033,7 @@ void Codec_LoopTask(void *arg) {
   }
 }
 
-void screen1TimeoutTask() {
+void screen1TimeoutTask(lv_timer_t * timer) {
   // sensor id -> user
   int sensorMap[] = {1,2,0,3};
   int riichi_count = 0; 
@@ -1021,7 +1068,7 @@ void handleScreenTimeoutTask(lv_timer_t * timer) {
 
   // 1. Identify which screen is currently on the display
   if (current_screen == ui_Screen1) {
-    screen1TimeoutTask();
+    screen1TimeoutTask(timer);
   } 
   else if (current_screen == ui_Screen2) {
     screen2TimeoutTask();
@@ -1034,9 +1081,16 @@ void KEY_LoopTask(void *arg) {
   for (;;) {
     EventBits_t even = xEventGroupWaitBits(GP18ButtonGroups, (0x01 | 0x02 | 0x04), pdTRUE, pdFALSE, pdMS_TO_TICKS(2000));
     if (even & 0x01) {
-      // is_Music = false;
-      is_Music = true;
-      xEventGroupSetBits(CodecGroups, 0x04);
+      preferences.begin("ecompass", false);
+      muteVoices = !muteVoices;
+      preferences.putInt("mute", muteVoices); // Save new value to flash
+
+      preferences.end();
+      if (Lvgl_lock(-1)) {
+        lv_label_set_text(ui_speakericon, muteVoices ? LV_SYMBOL_MUTE : LV_SYMBOL_VOLUME_MAX);
+        Lvgl_unlock();
+      }
+
     } else if (even & 0x02) {
       is_Music = true;
       xEventGroupSetBits(CodecGroups, 0x04);
@@ -1178,7 +1232,10 @@ void processLightSensor(int rawValue, int sensor_id) {
         currState = STATE_STABLE_COVERED;
         currentStateArr[sensor_id] = currState;
         lastTriggered[sensor_id] = currTime;
-        xEventGroupSetBits(CodecGroups, 1 << sensor_id);
+        if (!muteVoices) {
+          xEventGroupSetBits(CodecGroups, 1 << sensor_id);
+        }
+        
     }
     else if (prevState != STATE_STABLE_COVERED && rawValue < 250) {
         currState = STATE_STABLE_COVERED;
@@ -1219,7 +1276,7 @@ void SENSOR_LoopTask(void *arg) {
         digitalWrite(selectPins[2], s2);
         digitalWrite(selectPins[3], s3);
         vTaskDelay(xSettleDelay);
-        int rawVal = analogRead(signalPin);
+        int rawVal = MIN(analogRead(signalPin) * sensorMultipliers[sensorMultiplierIndex], 4095.0);
         lightState[i-8] = floor(180.0*rawVal/4095.0);
         processLightSensor(rawVal, i-8);
       }
@@ -1236,17 +1293,8 @@ const unsigned long interval = 2000; // Interval in milliseconds (1 second)
 
 
 void setupTimers() {
- lv_timer_create(handleScreenTimeoutTask, 100, NULL);
-
-  // lv_anim_t a;
-  // lv_anim_init(&a);
-  // lv_anim_set_var(&a, ui_roundpane);
-  // lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)anim_rotation_cb);
-
-  // lv_anim_set_values(&a, 0, 3600); // 0 to 360 degrees (0.1 deg increments)
-  // lv_anim_set_duration(&a, 3000);  // 3 seconds
-  // lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE); // Loop forever
-  // lv_anim_start(&a);
+  lv_timer_create(handleScreenTimeoutTask, 100, NULL);
+  lv_timer_create(updateBatteryLevel, 30000, NULL);
 }
 
 
@@ -1288,6 +1336,18 @@ void incrementRound() {
 
 }
 
+void setupPreferences() {
+  preferences.begin("ecompass", false);
+  // Read stored value, default to 0 if it doesn't exist yet
+  muteVoices = preferences.getInt("mute", 0);
+  sensorMultiplierIndex = preferences.getInt("sensorMultiplierIndex",3);
+  lv_label_set_text(ui_speakericon, muteVoices ? LV_SYMBOL_MUTE : LV_SYMBOL_VOLUME_MAX);
+  // Close preferences (optional, but good practice)
+  preferences.end();
+}
+
+
+
 void setup()
 {
   audio_ptr = (uint8_t *)heap_caps_malloc(288 * 1000 * sizeof(uint8_t), MALLOC_CAP_SPIRAM);
@@ -1303,10 +1363,12 @@ void setup()
 
    if (Lvgl_lock(-1)) {
     ui_init();
+    setupPreferences();
     setupModalContentArr();
     setPlayerWindImgs();
     setupObservers();
     setupTimers();
+    updateBatteryLevel(NULL);
     repaintPlayers();
     Lvgl_unlock();
 
